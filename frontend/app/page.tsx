@@ -48,6 +48,11 @@ export default function Home() {
   const [background, setBackground] = useState('')
   const [tone, setTone] = useState('professional')
   const [copied, setCopied] = useState(false)
+  const [interviewApp, setInterviewApp] = useState<Application | null>(null)
+  const [interviewPrep, setInterviewPrep] = useState<any>(null)
+  const [generatingIP, setGeneratingIP] = useState(false)
+  const [interviewBackground, setInterviewBackground] = useState('')
+  const [activeTab, setActiveTab] = useState<'behavioral' | 'technical' | 'to_ask' | 'red_flags'>('behavioral')
   const [form, setForm] = useState({
     company_name: '',
     job_title: '',
@@ -147,6 +152,25 @@ export default function Home() {
     setGeneratingCL(false)
   }
 
+  async function generateInterviewPrep() {
+    if (!interviewApp) return
+    setGeneratingIP(true)
+    setInterviewPrep(null)
+    const res = await fetch(`${API}/api/v1/ai/interview-prep`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        job_description: interviewApp.job_description || interviewApp.job_title,
+        company_name: interviewApp.company_name,
+        job_title: interviewApp.job_title,
+        your_background: interviewBackground
+      })
+    })
+    const data = await res.json()
+    setInterviewPrep(data)
+    setGeneratingIP(false)
+  }
+
   function copyToClipboard() {
     navigator.clipboard.writeText(coverLetter)
     setCopied(true)
@@ -244,13 +268,8 @@ export default function Home() {
             <div className="space-y-3 mb-4">
               <div>
                 <label className="text-xs text-gray-400 mb-1 block">Your Background & Experience</label>
-                <textarea
-                  placeholder="e.g. 5 years Python developer. Built payment APIs handling $10M/day. Expert in FastAPI and AWS. Led team of 3 engineers."
-                  value={background}
-                  onChange={e => setBackground(e.target.value)}
-                  rows={4}
-                  className="w-full bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-sm outline-none focus:border-violet-500 resize-none"
-                />
+                <textarea placeholder="Be specific and honest — e.g. 2 years React experience, built 3 personal projects, CS degree, proficient in Python and JavaScript." value={background} onChange={e => setBackground(e.target.value)} rows={4} className="w-full bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-sm outline-none focus:border-violet-500 resize-none" />
+                <p className="text-yellow-500/70 text-xs mt-1">⚠️ Be specific — vague input leads to fabricated details.</p>
               </div>
               <div>
                 <label className="text-xs text-gray-400 mb-1 block">Tone</label>
@@ -268,11 +287,86 @@ export default function Home() {
               <div className="bg-gray-800 border border-gray-700 rounded-lg p-4">
                 <div className="flex items-center justify-between mb-3">
                   <p className="text-violet-400 text-sm font-medium">Generated Cover Letter</p>
-                  <button onClick={copyToClipboard} className="text-xs text-gray-400 hover:text-white transition">
-                    {copied ? '✓ Copied!' : 'Copy'}
-                  </button>
+                  <button onClick={copyToClipboard} className="text-xs text-gray-400 hover:text-white transition">{copied ? '✓ Copied!' : 'Copy'}</button>
                 </div>
                 <p className="text-gray-300 text-sm leading-relaxed whitespace-pre-wrap">{coverLetter}</p>
+              </div>
+            )}
+          </div>
+        </div>
+      )}
+
+      {/* Interview Prep Modal */}
+      {interviewApp && (
+        <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-50 p-4">
+          <div className="bg-gray-900 border border-gray-700 rounded-xl p-6 w-full max-w-2xl max-h-[90vh] overflow-y-auto">
+            <div className="flex items-center justify-between mb-4">
+              <h2 className="text-lg font-semibold">🎯 Interview Prep — {interviewApp.company_name}</h2>
+              <button onClick={() => { setInterviewApp(null); setInterviewPrep(null) }} className="text-gray-400 hover:text-white">✕</button>
+            </div>
+            {!interviewPrep && (
+              <div className="space-y-3 mb-4">
+                <div>
+                  <label className="text-xs text-gray-400 mb-1 block">Your Background (optional)</label>
+                  <textarea placeholder="e.g. 3 years Python experience, built REST APIs, familiar with AWS..." value={interviewBackground} onChange={e => setInterviewBackground(e.target.value)} rows={3} className="w-full bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-sm outline-none focus:border-violet-500 resize-none" />
+                </div>
+                <button onClick={generateInterviewPrep} disabled={generatingIP} className="w-full bg-violet-600 hover:bg-violet-700 text-white text-sm py-2 rounded-lg transition disabled:opacity-50">
+                  {generatingIP ? '🤖 Generating...' : '🎯 Generate Interview Questions'}
+                </button>
+              </div>
+            )}
+            {generatingIP && <div className="text-center py-8 text-gray-400 text-sm">🤖 Generating tailored questions...</div>}
+            {interviewPrep && (
+              <div>
+                <div className="flex gap-2 mb-4 flex-wrap">
+                  {(['behavioral', 'technical', 'to_ask', 'red_flags'] as const).map(tab => (
+                    <button key={tab} onClick={() => setActiveTab(tab)} className={`text-xs px-3 py-1.5 rounded-lg transition ${activeTab === tab ? 'bg-violet-600 text-white' : 'bg-gray-800 text-gray-400 hover:text-white'}`}>
+                      {tab === 'behavioral' && '🧠 Behavioral'}
+                      {tab === 'technical' && '⚙️ Technical'}
+                      {tab === 'to_ask' && '❓ Ask Them'}
+                      {tab === 'red_flags' && '🚩 Red Flags'}
+                    </button>
+                  ))}
+                </div>
+                {activeTab === 'behavioral' && (
+                  <div className="space-y-3">
+                    {interviewPrep.behavioral.map((item: any, i: number) => (
+                      <div key={i} className="bg-gray-800 rounded-lg p-4">
+                        <p className="text-white text-sm font-medium mb-2">Q{i + 1}: {item.question}</p>
+                        <p className="text-violet-300 text-xs">💡 {item.tip}</p>
+                      </div>
+                    ))}
+                  </div>
+                )}
+                {activeTab === 'technical' && (
+                  <div className="space-y-3">
+                    {interviewPrep.technical.map((item: any, i: number) => (
+                      <div key={i} className="bg-gray-800 rounded-lg p-4">
+                        <p className="text-white text-sm font-medium mb-2">Q{i + 1}: {item.question}</p>
+                        <p className="text-teal-300 text-xs">🔧 {item.hint}</p>
+                      </div>
+                    ))}
+                  </div>
+                )}
+                {activeTab === 'to_ask' && (
+                  <div className="space-y-3">
+                    {interviewPrep.to_ask.map((q: string, i: number) => (
+                      <div key={i} className="bg-gray-800 rounded-lg p-4">
+                        <p className="text-white text-sm">❓ {q}</p>
+                      </div>
+                    ))}
+                  </div>
+                )}
+                {activeTab === 'red_flags' && (
+                  <div className="space-y-3">
+                    {interviewPrep.red_flags.map((flag: string, i: number) => (
+                      <div key={i} className="bg-red-500/10 border border-red-500/20 rounded-lg p-4">
+                        <p className="text-red-400 text-sm">🚩 {flag}</p>
+                      </div>
+                    ))}
+                  </div>
+                )}
+                <button onClick={() => setInterviewPrep(null)} className="mt-4 w-full bg-gray-800 hover:bg-gray-700 text-sm py-2 rounded-lg transition text-gray-400">Regenerate</button>
               </div>
             )}
           </div>
@@ -288,7 +382,6 @@ export default function Home() {
             </div>
           ))}
         </div>
-
         <div className="bg-gray-900 border border-gray-800 rounded-xl">
           <div className="px-6 py-4 border-b border-gray-800">
             <h2 className="font-medium">Applications</h2>
@@ -329,6 +422,7 @@ export default function Home() {
                           <button onClick={() => analyzeExisting(app)} className="text-xs text-violet-400 hover:text-violet-300 transition">🤖 Analyze</button>
                         )}
                         <button onClick={() => { setCoverLetterApp(app); setCoverLetter('') }} className="text-xs text-green-400 hover:text-green-300 transition">✍️ Cover Letter</button>
+                        <button onClick={() => { setInterviewApp(app); setInterviewPrep(null) }} className="text-xs text-yellow-400 hover:text-yellow-300 transition">🎯 Prep</button>
                         <button onClick={() => deleteApp(app.id)} disabled={deletingId === app.id} className="text-xs text-red-400 hover:text-red-300 transition disabled:opacity-50">
                           {deletingId === app.id ? 'Deleting...' : 'Delete'}
                         </button>

@@ -74,3 +74,42 @@ Write the cover letter now."""
         max_tokens=600,
     )
     return {'cover_letter': response.choices[0].message.content}
+
+class InterviewPrepRequest(BaseModel):
+    job_description: str
+    company_name: str
+    job_title: str
+    your_background: str = ''
+
+@router.post('/interview-prep')
+async def generate_interview_prep(req: InterviewPrepRequest):
+    if not req.job_description or len(req.job_description) < 30:
+        raise HTTPException(status_code=400, detail='Job description too short')
+
+    response = client.chat.completions.create(
+        model='gpt-4o',
+        response_format={'type': 'json_object'},
+        messages=[
+            {
+                'role': 'system',
+                'content': '''You are an expert interview coach. Generate interview preparation material and return JSON with these exact keys:
+- behavioral: list of 5 objects with "question" and "tip" keys (STAR-method behavioral questions)
+- technical: list of 5 objects with "question" and "hint" keys (role-specific technical questions)  
+- to_ask: list of 3 strings (smart questions the candidate should ask the interviewer)
+- red_flags: list of 3 strings (things to watch out for based on the job description)
+Return only valid JSON.'''
+            },
+            {
+                'role': 'user',
+                'content': f'''Job Title: {req.job_title}
+Company: {req.company_name}
+Job Description: {req.job_description}
+My Background: {req.your_background or "Not provided"}
+
+Generate comprehensive interview prep material.'''
+            }
+        ],
+        temperature=0.7,
+        max_tokens=1500,
+    )
+    return json.loads(response.choices[0].message.content)
