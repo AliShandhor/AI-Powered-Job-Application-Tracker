@@ -32,6 +32,7 @@ class Application(Base):
     updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now(), onupdate=func.now())
     user: Mapped['User'] = relationship(back_populates='applications')
     events: Mapped[list['Event']] = relationship(back_populates='application')
+    notes: Mapped[list['Note']] = relationship(back_populates='application', order_by='Note.created_at.desc()')
 
 class Event(Base):
     __tablename__ = 'events'
@@ -41,3 +42,11 @@ class Event(Base):
     event_date: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
     notes: Mapped[str] = mapped_column(Text, nullable=True)
     application: Mapped['Application'] = relationship(back_populates='events')
+
+class Note(Base):
+    __tablename__ = 'notes'
+    id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    application_id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), ForeignKey('applications.id'), nullable=False)
+    content: Mapped[str] = mapped_column(Text, nullable=False)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+    application: Mapped['Application'] = relationship(back_populates='notes')
