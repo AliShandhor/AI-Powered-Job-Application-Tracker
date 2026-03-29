@@ -188,6 +188,7 @@ export default function Home() {
     <main className="min-h-screen bg-gray-950 text-white">
       <nav className="border-b border-gray-800 px-6 py-4 flex items-center justify-between">
         <span className="text-lg font-semibold text-violet-400">JobTracker AI</span>
+          <a href="/analytics" className="text-gray-400 hover:text-white text-sm transition">Analytics</a>
         <button onClick={() => { setShowForm(true); setAnalysis(null) }} className="bg-violet-600 hover:bg-violet-700 text-white text-sm px-4 py-2 rounded-lg transition">
           + Add Application
         </button>
@@ -423,6 +424,7 @@ export default function Home() {
                         )}
                         <button onClick={() => { setCoverLetterApp(app); setCoverLetter('') }} className="text-xs text-green-400 hover:text-green-300 transition">✍️ Cover Letter</button>
                         <button onClick={() => { setInterviewApp(app); setInterviewPrep(null) }} className="text-xs text-yellow-400 hover:text-yellow-300 transition">🎯 Prep</button>
+                        <button onClick={() => { setNotesApp(app); fetchNotes(app.id) }} className="text-xs text-blue-400 hover:text-blue-300 transition">Notes</button>
                         <button onClick={() => deleteApp(app.id)} disabled={deletingId === app.id} className="text-xs text-red-400 hover:text-red-300 transition disabled:opacity-50">
                           {deletingId === app.id ? 'Deleting...' : 'Delete'}
                         </button>
