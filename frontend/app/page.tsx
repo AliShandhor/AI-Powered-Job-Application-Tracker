@@ -1,6 +1,8 @@
 'use client'
 import { useState, useEffect } from 'react'
 
+const API = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000'
+
 type Application = {
   id: string
   company_name: string
@@ -51,14 +53,14 @@ export default function Home() {
   useEffect(() => { fetchApps() }, [])
 
   async function fetchApps() {
-    const res = await fetch('http://localhost:8000/api/v1/applications/')
+    const res = await fetch(`${API}/api/v1/applications/`)
     const data = await res.json()
     setApps(data)
     setLoading(false)
   }
 
   async function addApp() {
-    await fetch('http://localhost:8000/api/v1/applications/', {
+    await fetch(`${API}/api/v1/applications/`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
@@ -75,14 +77,14 @@ export default function Home() {
   async function deleteApp(id: string) {
     if (!confirm('Delete this application?')) return
     setDeletingId(id)
-    await fetch(`http://localhost:8000/api/v1/applications/${id}`, { method: 'DELETE' })
+    await fetch(`${API}/api/v1/applications/${id}`, { method: 'DELETE' })
     setDeletingId(null)
     fetchApps()
   }
 
   async function updateStatus(id: string, status: string) {
     setUpdatingId(id)
-    await fetch(`http://localhost:8000/api/v1/applications/${id}`, {
+    await fetch(`${API}/api/v1/applications/${id}`, {
       method: 'PATCH',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ status })
@@ -94,7 +96,7 @@ export default function Home() {
   async function analyzeJob() {
     if (!form.job_description || form.job_description.length < 50) return
     setAnalyzing(true)
-    const res = await fetch('http://localhost:8000/api/v1/ai/analyze-job', {
+    const res = await fetch(`${API}/api/v1/ai/analyze-job`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ job_description: form.job_description })
@@ -109,7 +111,7 @@ export default function Home() {
     setSelectedApp(app)
     setAnalyzing(true)
     setAnalysis(null)
-    const res = await fetch('http://localhost:8000/api/v1/ai/analyze-job', {
+    const res = await fetch(`${API}/api/v1/ai/analyze-job`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ job_description: app.job_description })
@@ -135,7 +137,6 @@ export default function Home() {
         </button>
       </nav>
 
-      {/* Add Application Modal */}
       {showForm && (
         <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-50 p-4">
           <div className="bg-gray-900 border border-gray-700 rounded-xl p-6 w-full max-w-2xl max-h-[90vh] overflow-y-auto">
@@ -169,7 +170,6 @@ export default function Home() {
                 className="bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-sm outline-none focus:border-violet-500"
               />
             </div>
-
             <textarea
               placeholder="Paste job description here for AI analysis (optional)..."
               value={form.job_description}
@@ -177,7 +177,6 @@ export default function Home() {
               rows={5}
               className="w-full bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-sm outline-none focus:border-violet-500 resize-none mb-3"
             />
-
             {form.job_description.length >= 50 && !analysis && (
               <button
                 onClick={analyzeJob}
@@ -187,7 +186,6 @@ export default function Home() {
                 {analyzing ? '🤖 Analyzing...' : '🤖 Analyze with AI'}
               </button>
             )}
-
             {analysis && (
               <div className="bg-gray-800 border border-gray-700 rounded-lg p-4 mb-3 text-sm">
                 <p className="text-violet-400 font-medium mb-3">AI Analysis</p>
@@ -224,14 +222,13 @@ export default function Home() {
                     <p className="text-gray-400 text-xs mb-1">Culture</p>
                     <div className="flex flex-wrap gap-1">
                       {analysis.culture_signals.map(s => (
-                        <span key={s} className="bg-green-500/10 text-green-400 text-xs px-2 py-0.5 rounded-full">{s}</span>
+                        <span key={s} className="bg-green-500/10 text-green-400 text.xs px-2 py-0.5 rounded-full">{s}</span>
                       ))}
                     </div>
                   </div>
                 </div>
               </div>
             )}
-
             <div className="flex gap-2">
               <button onClick={addApp} className="flex-1 bg-violet-600 hover:bg-violet-700 text-white text-sm py-2 rounded-lg transition">Save</button>
               <button onClick={() => { setShowForm(false); setAnalysis(null) }} className="flex-1 bg-gray-800 hover:bg-gray-700 text-sm py-2 rounded-lg transition">Cancel</button>
@@ -240,7 +237,6 @@ export default function Home() {
         </div>
       )}
 
-      {/* AI Analysis Panel for existing app */}
       {selectedApp && (
         <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-50 p-4">
           <div className="bg-gray-900 border border-gray-700 rounded-xl p-6 w-full max-w-lg">
@@ -308,7 +304,6 @@ export default function Home() {
             </div>
           ))}
         </div>
-
         <div className="bg-gray-900 border border-gray-800 rounded-xl">
           <div className="px-6 py-4 border-b border-gray-800">
             <h2 className="font-medium">Applications</h2>
@@ -352,10 +347,7 @@ export default function Home() {
                     <td className="px-6 py-4 text-gray-400 text-sm">{app.applied_date}</td>
                     <td className="px-6 py-4 flex items-center gap-3">
                       {app.job_description && (
-                        <button
-                          onClick={() => analyzeExisting(app)}
-                          className="text-xs text-violet-400 hover:text-violet-300 transition"
-                        >
+                        <button onClick={() => analyzeExisting(app)} className="text-xs text-violet-400 hover:text-violet-300 transition">
                           🤖 Analyze
                         </button>
                       )}
