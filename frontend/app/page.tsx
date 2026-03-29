@@ -13,7 +13,12 @@ export default function Home() {
   const [apps, setApps] = useState<Application[]>([])
   const [loading, setLoading] = useState(true)
   const [showForm, setShowForm] = useState(false)
-  const [form, setForm] = useState({ company_name: '', job_title: '', status: 'applied', applied_date: '' })
+  const [form, setForm] = useState({
+    company_name: '',
+    job_title: '',
+    status: 'applied',
+    applied_date: ''
+  })
 
   useEffect(() => { fetchApps() }, [])
 
@@ -28,7 +33,10 @@ export default function Home() {
     await fetch('http://localhost:8000/api/v1/applications/', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ ...form, applied_date: form.applied_date || new Date().toISOString().split('T')[0] })
+      body: JSON.stringify({
+        ...form,
+        applied_date: form.applied_date || new Date().toISOString().split('T')[0]
+      })
     })
     setShowForm(false)
     setForm({ company_name: '', job_title: '', status: 'applied', applied_date: '' })
@@ -37,7 +45,7 @@ export default function Home() {
 
   const stats = [
     { label: 'Total Applied', value: apps.length },
-    { label: 'In Progress', value: apps.filter(a => ['screening','interview'].includes(a.status)).length },
+    { label: 'In Progress', value: apps.filter(a => ['screening', 'interview'].includes(a.status)).length },
     { label: 'Interviews', value: apps.filter(a => a.status === 'interview').length },
     { label: 'Offers', value: apps.filter(a => a.status === 'offer').length },
   ]
@@ -54,7 +62,10 @@ export default function Home() {
     <main className="min-h-screen bg-gray-950 text-white">
       <nav className="border-b border-gray-800 px-6 py-4 flex items-center justify-between">
         <span className="text-lg font-semibold text-violet-400">JobTracker AI</span>
-        <button onClick={() => setShowForm(true)} className="bg-violet-600 hover:bg-violet-700 text-white text-sm px-4 py-2 rounded-lg transition">
+        <button
+          onClick={() => setShowForm(true)}
+          className="bg-violet-600 hover:bg-violet-700 text-white text-sm px-4 py-2 rounded-lg transition"
+        >
           + Add Application
         </button>
       </nav>
@@ -64,20 +75,49 @@ export default function Home() {
           <div className="bg-gray-900 border border-gray-700 rounded-xl p-6 w-full max-w-md">
             <h2 className="text-lg font-semibold mb-4">New Application</h2>
             <div className="space-y-3">
-              <input placeholder="Company name" value={form.company_name} onChange={e => setForm({...form, company_name: e.target.value})} className="w-full bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-sm outline-none focus:border-violet-500" />
-              <input placeholder="Job title" value={form.job_title} onChange={e => setForm({...form, job_title: e.target.value})} className="w-full bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-sm outline-none focus:border-violet-500" />
-              <select value={form.status} onChange={e => setForm({...form, status: e.target.value})} className="w-full bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-sm outline-none focus:border-violet-500">
+              <input
+                placeholder="Company name"
+                value={form.company_name}
+                onChange={e => setForm({ ...form, company_name: e.target.value })}
+                className="w-full bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-sm outline-none focus:border-violet-500"
+              />
+              <input
+                placeholder="Job title"
+                value={form.job_title}
+                onChange={e => setForm({ ...form, job_title: e.target.value })}
+                className="w-full bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-sm outline-none focus:border-violet-500"
+              />
+              <select
+                value={form.status}
+                onChange={e => setForm({ ...form, status: e.target.value })}
+                className="w-full bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-sm outline-none focus:border-violet-500"
+              >
                 <option value="applied">Applied</option>
                 <option value="screening">Screening</option>
                 <option value="interview">Interview</option>
                 <option value="offer">Offer</option>
                 <option value="rejected">Rejected</option>
               </select>
-              <input type="date" value={form.applied_date} onChange={e => setForm({...form, applied_date: e.target.value})} className="w-full bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-sm outline-none focus:border-violet-500" />
+              <input
+                type="date"
+                value={form.applied_date}
+                onChange={e => setForm({ ...form, applied_date: e.target.value })}
+                className="w-full bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-sm outline-none focus:border-violet-500"
+              />
             </div>
             <div className="flex gap-2 mt-4">
-              <button onClick={addApp} className="flex-1 bg-violet-600 hover:bg-violet-700 text-white text-sm py-2 rounded-lg transition">Save</button>
-              <button onClick={() => setShowForm(false)} className="flex-1 bg-gray-800 hover:bg-gray-700 text-sm py-2 rounded-lg transition">Cancel</button>
+              <button
+                onClick={addApp}
+                className="flex-1 bg-violet-600 hover:bg-violet-700 text-white text-sm py-2 rounded-lg transition"
+              >
+                Save
+              </button>
+              <button
+                onClick={() => setShowForm(false)}
+                className="flex-1 bg-gray-800 hover:bg-gray-700 text-sm py-2 rounded-lg transition"
+              >
+                Cancel
+              </button>
             </div>
           </div>
         </div>
@@ -92,6 +132,7 @@ export default function Home() {
             </div>
           ))}
         </div>
+
         <div className="bg-gray-900 border border-gray-800 rounded-xl">
           <div className="px-6 py-4 border-b border-gray-800">
             <h2 className="font-medium">Applications</h2>
@@ -102,7 +143,12 @@ export default function Home() {
             <div className="p-12 text-center text-gray-500">
               <p className="text-4xl mb-3">📋</p>
               <p className="font-medium text-gray-300">No applications yet</p>
-              <button onClick={() => setShowForm(true)} className="mt-4 bg-violet-600 hover:bg-violet-700 text-white text-sm px-4 py-2 rounded-lg transition">+ Add Application</button>
+              <button
+                onClick={() => setShowForm(true)}
+                className="mt-4 bg-violet-600 hover:bg-violet-700 text-white text-sm px-4 py-2 rounded-lg transition"
+              >
+                + Add Application
+              </button>
             </div>
           ) : (
             <table className="w-full">
@@ -120,7 +166,10 @@ export default function Home() {
                     <td className="px-6 py-4 font-medium">{app.company_name}</td>
                     <td className="px-6 py-4 text-gray-400">{app.job_title}</td>
                     <td className="px-6 py-4">
-                    <span className={`text-xs px-2 py-1 rounded-full ${statusColors[app.status] || 'bg-gray-700 text-gray-300'}`}>{app.status}</span>                    </td>
+                      <span className={`text-xs px-2 py-1 rounded-full ${statusColors[app.status] || 'bg-gray-700 text-gray-300'}`}>
+                        {app.status}
+                      </span>
+                    </td>
                     <td className="px-6 py-4 text-gray-400 text-sm">{app.applied_date}</td>
                   </tr>
                 ))}
