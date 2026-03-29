@@ -42,6 +42,12 @@ export default function Home() {
   const [analyzing, setAnalyzing] = useState(false)
   const [analysis, setAnalysis] = useState<AIAnalysis | null>(null)
   const [selectedApp, setSelectedApp] = useState<Application | null>(null)
+  const [coverLetterApp, setCoverLetterApp] = useState<Application | null>(null)
+  const [coverLetter, setCoverLetter] = useState('')
+  const [generatingCL, setGeneratingCL] = useState(false)
+  const [background, setBackground] = useState('')
+  const [tone, setTone] = useState('professional')
+  const [copied, setCopied] = useState(false)
   const [form, setForm] = useState({
     company_name: '',
     job_title: '',
@@ -121,6 +127,32 @@ export default function Home() {
     setAnalyzing(false)
   }
 
+  async function generateCoverLetter() {
+    if (!coverLetterApp || !background) return
+    setGeneratingCL(true)
+    setCoverLetter('')
+    const res = await fetch(`${API}/api/v1/ai/cover-letter`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        job_description: coverLetterApp.job_description || coverLetterApp.job_title,
+        company_name: coverLetterApp.company_name,
+        job_title: coverLetterApp.job_title,
+        your_background: background,
+        tone
+      })
+    })
+    const data = await res.json()
+    setCoverLetter(data.cover_letter)
+    setGeneratingCL(false)
+  }
+
+  function copyToClipboard() {
+    navigator.clipboard.writeText(coverLetter)
+    setCopied(true)
+    setTimeout(() => setCopied(false), 2000)
+  }
+
   const stats = [
     { label: 'Total Applied', value: apps.length },
     { label: 'In Progress', value: apps.filter(a => ['screening', 'interview'].includes(a.status)).length },
@@ -137,52 +169,22 @@ export default function Home() {
         </button>
       </nav>
 
+      {/* Add Application Modal */}
       {showForm && (
         <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-50 p-4">
           <div className="bg-gray-900 border border-gray-700 rounded-xl p-6 w-full max-w-2xl max-h-[90vh] overflow-y-auto">
             <h2 className="text-lg font-semibold mb-4">New Application</h2>
             <div className="grid grid-cols-2 gap-3 mb-3">
-              <input
-                placeholder="Company name"
-                value={form.company_name}
-                onChange={e => setForm({ ...form, company_name: e.target.value })}
-                className="bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-sm outline-none focus:border-violet-500"
-              />
-              <input
-                placeholder="Job title"
-                value={form.job_title}
-                onChange={e => setForm({ ...form, job_title: e.target.value })}
-                className="bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-sm outline-none focus:border-violet-500"
-              />
-              <select
-                value={form.status}
-                onChange={e => setForm({ ...form, status: e.target.value })}
-                className="bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-sm outline-none focus:border-violet-500"
-              >
-                {STATUS_OPTIONS.map(s => (
-                  <option key={s} value={s}>{s.charAt(0).toUpperCase() + s.slice(1)}</option>
-                ))}
+              <input placeholder="Company name" value={form.company_name} onChange={e => setForm({ ...form, company_name: e.target.value })} className="bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-sm outline-none focus:border-violet-500" />
+              <input placeholder="Job title" value={form.job_title} onChange={e => setForm({ ...form, job_title: e.target.value })} className="bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-sm outline-none focus:border-violet-500" />
+              <select value={form.status} onChange={e => setForm({ ...form, status: e.target.value })} className="bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-sm outline-none focus:border-violet-500">
+                {STATUS_OPTIONS.map(s => <option key={s} value={s}>{s.charAt(0).toUpperCase() + s.slice(1)}</option>)}
               </select>
-              <input
-                type="date"
-                value={form.applied_date}
-                onChange={e => setForm({ ...form, applied_date: e.target.value })}
-                className="bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-sm outline-none focus:border-violet-500"
-              />
+              <input type="date" value={form.applied_date} onChange={e => setForm({ ...form, applied_date: e.target.value })} className="bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-sm outline-none focus:border-violet-500" />
             </div>
-            <textarea
-              placeholder="Paste job description here for AI analysis (optional)..."
-              value={form.job_description}
-              onChange={e => setForm({ ...form, job_description: e.target.value })}
-              rows={5}
-              className="w-full bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-sm outline-none focus:border-violet-500 resize-none mb-3"
-            />
+            <textarea placeholder="Paste job description here for AI analysis (optional)..." value={form.job_description} onChange={e => setForm({ ...form, job_description: e.target.value })} rows={5} className="w-full bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-sm outline-none focus:border-violet-500 resize-none mb-3" />
             {form.job_description.length >= 50 && !analysis && (
-              <button
-                onClick={analyzeJob}
-                disabled={analyzing}
-                className="w-full bg-violet-900/50 hover:bg-violet-800/50 border border-violet-700 text-violet-300 text-sm py-2 rounded-lg transition mb-3 disabled:opacity-50"
-              >
+              <button onClick={analyzeJob} disabled={analyzing} className="w-full bg-violet-900/50 hover:bg-violet-800/50 border border-violet-700 text-violet-300 text-sm py-2 rounded-lg transition mb-3 disabled:opacity-50">
                 {analyzing ? '🤖 Analyzing...' : '🤖 Analyze with AI'}
               </button>
             )}
@@ -190,42 +192,9 @@ export default function Home() {
               <div className="bg-gray-800 border border-gray-700 rounded-lg p-4 mb-3 text-sm">
                 <p className="text-violet-400 font-medium mb-3">AI Analysis</p>
                 <div className="grid grid-cols-2 gap-3">
-                  <div>
-                    <p className="text-gray-400 text-xs mb-1">Seniority</p>
-                    <p className="text-white capitalize">{analysis.seniority_level} · {analysis.estimated_yoe}+ yrs</p>
-                  </div>
-                  {analysis.compensation && (
-                    <div>
-                      <p className="text-gray-400 text-xs mb-1">Compensation</p>
-                      <p className="text-white">${analysis.compensation.min / 1000}k – ${analysis.compensation.max / 1000}k</p>
-                    </div>
-                  )}
-                  <div className="col-span-2">
-                    <p className="text-gray-400 text-xs mb-1">Required Skills</p>
-                    <div className="flex flex-wrap gap-1">
-                      {analysis.required_skills.map(s => (
-                        <span key={s} className="bg-blue-500/10 text-blue-400 text-xs px-2 py-0.5 rounded-full">{s}</span>
-                      ))}
-                    </div>
-                  </div>
-                  {analysis.preferred_skills.length > 0 && (
-                    <div className="col-span-2">
-                      <p className="text-gray-400 text-xs mb-1">Nice to Have</p>
-                      <div className="flex flex-wrap gap-1">
-                        {analysis.preferred_skills.map(s => (
-                          <span key={s} className="bg-gray-700 text-gray-300 text-xs px-2 py-0.5 rounded-full">{s}</span>
-                        ))}
-                      </div>
-                    </div>
-                  )}
-                  <div className="col-span-2">
-                    <p className="text-gray-400 text-xs mb-1">Culture</p>
-                    <div className="flex flex-wrap gap-1">
-                      {analysis.culture_signals.map(s => (
-                        <span key={s} className="bg-green-500/10 text-green-400 text.xs px-2 py-0.5 rounded-full">{s}</span>
-                      ))}
-                    </div>
-                  </div>
+                  <div><p className="text-gray-400 text-xs mb-1">Seniority</p><p className="text-white capitalize">{analysis.seniority_level} · {analysis.estimated_yoe}+ yrs</p></div>
+                  {analysis.compensation && <div><p className="text-gray-400 text-xs mb-1">Compensation</p><p className="text-white">${analysis.compensation.min / 1000}k – ${analysis.compensation.max / 1000}k</p></div>}
+                  <div className="col-span-2"><p className="text-gray-400 text-xs mb-1">Required Skills</p><div className="flex flex-wrap gap-1">{analysis.required_skills.map(s => <span key={s} className="bg-blue-500/10 text-blue-400 text-xs px-2 py-0.5 rounded-full">{s}</span>)}</div></div>
                 </div>
               </div>
             )}
@@ -237,58 +206,73 @@ export default function Home() {
         </div>
       )}
 
+      {/* AI Analysis Modal */}
       {selectedApp && (
         <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-50 p-4">
-          <div className="bg-gray-900 border border-gray-700 rounded-xl p-6 w-full max-w-lg">
+          <div className="bg-gray-900 border border-gray-700 rounded-xl p-6 w-full max-w-lg max-h-[90vh] overflow-y-auto">
             <div className="flex items-center justify-between mb-4">
               <h2 className="text-lg font-semibold">AI Analysis — {selectedApp.company_name}</h2>
               <button onClick={() => { setSelectedApp(null); setAnalysis(null) }} className="text-gray-400 hover:text-white">✕</button>
             </div>
-            {analyzing && <p className="text-gray-400 text-sm text-center py-8">🤖 Analyzing job description...</p>}
+            {analyzing && <p className="text-gray-400 text-sm text-center py-8">🤖 Analyzing...</p>}
             {analysis && (
               <div className="space-y-3 text-sm">
                 <div className="grid grid-cols-2 gap-3">
-                  <div className="bg-gray-800 rounded-lg p-3">
-                    <p className="text-gray-400 text-xs mb-1">Seniority</p>
-                    <p className="text-white capitalize font-medium">{analysis.seniority_level}</p>
-                  </div>
-                  <div className="bg-gray-800 rounded-lg p-3">
-                    <p className="text-gray-400 text-xs mb-1">Experience</p>
-                    <p className="text-white font-medium">{analysis.estimated_yoe}+ years</p>
-                  </div>
+                  <div className="bg-gray-800 rounded-lg p-3"><p className="text-gray-400 text-xs mb-1">Seniority</p><p className="text-white capitalize font-medium">{analysis.seniority_level}</p></div>
+                  <div className="bg-gray-800 rounded-lg p-3"><p className="text-gray-400 text-xs mb-1">Experience</p><p className="text-white font-medium">{analysis.estimated_yoe}+ years</p></div>
                 </div>
                 {analysis.compensation && (
-                  <div className="bg-gray-800 rounded-lg p-3">
-                    <p className="text-gray-400 text-xs mb-1">Compensation</p>
-                    <p className="text-green-400 font-medium">${analysis.compensation.min.toLocaleString()} – ${analysis.compensation.max.toLocaleString()} {analysis.compensation.currency}</p>
-                  </div>
+                  <div className="bg-gray-800 rounded-lg p-3"><p className="text-gray-400 text-xs mb-1">Compensation</p><p className="text-green-400 font-medium">${analysis.compensation.min.toLocaleString()} – ${analysis.compensation.max.toLocaleString()} {analysis.compensation.currency}</p></div>
                 )}
-                <div className="bg-gray-800 rounded-lg p-3">
-                  <p className="text-gray-400 text-xs mb-2">Required Skills</p>
-                  <div className="flex flex-wrap gap-1">
-                    {analysis.required_skills.map(s => (
-                      <span key={s} className="bg-blue-500/10 text-blue-400 text-xs px-2 py-0.5 rounded-full">{s}</span>
-                    ))}
-                  </div>
+                <div className="bg-gray-800 rounded-lg p-3"><p className="text-gray-400 text-xs mb-2">Required Skills</p><div className="flex flex-wrap gap-1">{analysis.required_skills.map(s => <span key={s} className="bg-blue-500/10 text-blue-400 text-xs px-2 py-0.5 rounded-full">{s}</span>)}</div></div>
+                {analysis.preferred_skills.length > 0 && <div className="bg-gray-800 rounded-lg p-3"><p className="text-gray-400 text-xs mb-2">Nice to Have</p><div className="flex flex-wrap gap-1">{analysis.preferred_skills.map(s => <span key={s} className="bg-gray-700 text-gray-300 text-xs px-2 py-0.5 rounded-full">{s}</span>)}</div></div>}
+                <div className="bg-gray-800 rounded-lg p-3"><p className="text-gray-400 text-xs mb-2">Key Requirements</p><ul className="space-y-1">{analysis.key_requirements.map(r => <li key={r} className="text-gray-300 text-xs flex gap-2"><span className="text-violet-400">→</span>{r}</li>)}</ul></div>
+              </div>
+            )}
+          </div>
+        </div>
+      )}
+
+      {/* Cover Letter Modal */}
+      {coverLetterApp && (
+        <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-50 p-4">
+          <div className="bg-gray-900 border border-gray-700 rounded-xl p-6 w-full max-w-2xl max-h-[90vh] overflow-y-auto">
+            <div className="flex items-center justify-between mb-4">
+              <h2 className="text-lg font-semibold">✍️ Cover Letter — {coverLetterApp.company_name}</h2>
+              <button onClick={() => { setCoverLetterApp(null); setCoverLetter('') }} className="text-gray-400 hover:text-white">✕</button>
+            </div>
+            <div className="space-y-3 mb-4">
+              <div>
+                <label className="text-xs text-gray-400 mb-1 block">Your Background & Experience</label>
+                <textarea
+                  placeholder="e.g. 5 years Python developer. Built payment APIs handling $10M/day. Expert in FastAPI and AWS. Led team of 3 engineers."
+                  value={background}
+                  onChange={e => setBackground(e.target.value)}
+                  rows={4}
+                  className="w-full bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-sm outline-none focus:border-violet-500 resize-none"
+                />
+              </div>
+              <div>
+                <label className="text-xs text-gray-400 mb-1 block">Tone</label>
+                <select value={tone} onChange={e => setTone(e.target.value)} className="w-full bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-sm outline-none focus:border-violet-500">
+                  <option value="professional">Professional</option>
+                  <option value="conversational">Conversational</option>
+                  <option value="startup">Startup</option>
+                </select>
+              </div>
+              <button onClick={generateCoverLetter} disabled={generatingCL || background.length < 30} className="w-full bg-violet-600 hover:bg-violet-700 text-white text-sm py-2 rounded-lg transition disabled:opacity-50">
+                {generatingCL ? '🤖 Generating...' : '🤖 Generate Cover Letter'}
+              </button>
+            </div>
+            {coverLetter && (
+              <div className="bg-gray-800 border border-gray-700 rounded-lg p-4">
+                <div className="flex items-center justify-between mb-3">
+                  <p className="text-violet-400 text-sm font-medium">Generated Cover Letter</p>
+                  <button onClick={copyToClipboard} className="text-xs text-gray-400 hover:text-white transition">
+                    {copied ? '✓ Copied!' : 'Copy'}
+                  </button>
                 </div>
-                {analysis.preferred_skills.length > 0 && (
-                  <div className="bg-gray-800 rounded-lg p-3">
-                    <p className="text-gray-400 text-xs mb-2">Nice to Have</p>
-                    <div className="flex flex-wrap gap-1">
-                      {analysis.preferred_skills.map(s => (
-                        <span key={s} className="bg-gray-700 text-gray-300 text-xs px-2 py-0.5 rounded-full">{s}</span>
-                      ))}
-                    </div>
-                  </div>
-                )}
-                <div className="bg-gray-800 rounded-lg p-3">
-                  <p className="text-gray-400 text-xs mb-2">Key Requirements</p>
-                  <ul className="space-y-1">
-                    {analysis.key_requirements.map(r => (
-                      <li key={r} className="text-gray-300 text-xs flex gap-2"><span className="text-violet-400">→</span>{r}</li>
-                    ))}
-                  </ul>
-                </div>
+                <p className="text-gray-300 text-sm leading-relaxed whitespace-pre-wrap">{coverLetter}</p>
               </div>
             )}
           </div>
@@ -304,6 +288,7 @@ export default function Home() {
             </div>
           ))}
         </div>
+
         <div className="bg-gray-900 border border-gray-800 rounded-xl">
           <div className="px-6 py-4 border-b border-gray-800">
             <h2 className="font-medium">Applications</h2>
@@ -333,31 +318,21 @@ export default function Home() {
                     <td className="px-6 py-4 font-medium">{app.company_name}</td>
                     <td className="px-6 py-4 text-gray-400">{app.job_title}</td>
                     <td className="px-6 py-4">
-                      <select
-                        value={app.status}
-                        disabled={updatingId === app.id}
-                        onChange={e => updateStatus(app.id, e.target.value)}
-                        className={`text-xs px-2 py-1 rounded-full border-0 outline-none cursor-pointer ${statusColors[app.status] || 'bg-gray-700 text-gray-300'}`}
-                      >
-                        {STATUS_OPTIONS.map(s => (
-                          <option key={s} value={s}>{s.charAt(0).toUpperCase() + s.slice(1)}</option>
-                        ))}
+                      <select value={app.status} disabled={updatingId === app.id} onChange={e => updateStatus(app.id, e.target.value)} className={`text-xs px-2 py-1 rounded-full border-0 outline-none cursor-pointer ${statusColors[app.status] || 'bg-gray-700 text-gray-300'}`}>
+                        {STATUS_OPTIONS.map(s => <option key={s} value={s}>{s.charAt(0).toUpperCase() + s.slice(1)}</option>)}
                       </select>
                     </td>
                     <td className="px-6 py-4 text-gray-400 text-sm">{app.applied_date}</td>
-                    <td className="px-6 py-4 flex items-center gap-3">
-                      {app.job_description && (
-                        <button onClick={() => analyzeExisting(app)} className="text-xs text-violet-400 hover:text-violet-300 transition">
-                          🤖 Analyze
+                    <td className="px-6 py-4">
+                      <div className="flex items-center gap-3">
+                        {app.job_description && (
+                          <button onClick={() => analyzeExisting(app)} className="text-xs text-violet-400 hover:text-violet-300 transition">🤖 Analyze</button>
+                        )}
+                        <button onClick={() => { setCoverLetterApp(app); setCoverLetter('') }} className="text-xs text-green-400 hover:text-green-300 transition">✍️ Cover Letter</button>
+                        <button onClick={() => deleteApp(app.id)} disabled={deletingId === app.id} className="text-xs text-red-400 hover:text-red-300 transition disabled:opacity-50">
+                          {deletingId === app.id ? 'Deleting...' : 'Delete'}
                         </button>
-                      )}
-                      <button
-                        onClick={() => deleteApp(app.id)}
-                        disabled={deletingId === app.id}
-                        className="text-xs text-red-400 hover:text-red-300 transition disabled:opacity-50"
-                      >
-                        {deletingId === app.id ? 'Deleting...' : 'Delete'}
-                      </button>
+                      </div>
                     </td>
                   </tr>
                 ))}

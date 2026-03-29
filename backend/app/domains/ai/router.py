@@ -10,6 +10,13 @@ client = OpenAI(api_key=settings.OPENAI_API_KEY)
 class AnalyzeRequest(BaseModel):
     job_description: str
 
+class CoverLetterRequest(BaseModel):
+    job_description: str
+    company_name: str
+    job_title: str
+    your_background: str
+    tone: str = 'professional'
+
 @router.post('/analyze-job')
 async def analyze_job(req: AnalyzeRequest):
     if not req.job_description or len(req.job_description) < 50:
@@ -25,3 +32,45 @@ async def analyze_job(req: AnalyzeRequest):
         max_tokens=800,
     )
     return json.loads(response.choices[0].message.content)
+
+@router.post('/cover-letter')
+async def generate_cover_letter(req: CoverLetterRequest):
+    if not req.job_description or len(req.job_description) < 50:
+        raise HTTPException(status_code=400, detail='Job description too short')
+    if not req.your_background or len(req.your_background) < 30:
+        raise HTTPException(status_code=400, detail='Background too short')
+
+    tone_map = {
+        'professional': 'formal and professional tone',
+        'conversational': 'warm and conversational tone',
+        'startup': 'energetic startup tone, concise and direct',
+    }
+    tone_str = tone_map.get(req.tone, 'formal and professional tone')
+
+    prompt = f"""Job Title: {req.job_title}
+Company: {req.company_name}
+
+Job Description:
+{req.job_description}
+
+My Background:
+{req.your_background}
+
+Write the cover letter now."""
+
+    response = client.chat.completions.create(
+        model='gpt-4o',
+        messages=[
+            {
+                'role': 'system',
+                'content': f'You are an expert cover letter writer. Write a compelling tailored cover letter. NEVER use cliches like I am excited to apply. Be specific, reference actual job requirements. Keep it to 3 paragraphs max. Tone: {tone_str}. Start directly with a strong opening sentence. Do NOT include placeholders like [Your Name].'
+            },
+            {
+                'role': 'user',
+                'content': prompt
+            }
+        ],
+        temperature=0.7,
+        max_tokens=600,
+    )
+    return {'cover_letter': response.choices[0].message.content}
