@@ -429,8 +429,6 @@ export default function Home() {
               <h2 className="text-lg font-semibold">📝 Notes — {notesApp.company_name}</h2>
               <button onClick={() => { setNotesApp(null); setNotes([]) }} className="text-gray-400 hover:text-white">✕</button>
             </div>
-
-            {/* Add note input */}
             <div className="flex gap-2 mb-4">
               <textarea
                 placeholder="Add a note — interview feedback, follow-up reminder, contact info..."
@@ -440,16 +438,10 @@ export default function Home() {
                 className="flex-1 bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-sm outline-none focus:border-violet-500 resize-none"
                 onKeyDown={e => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); addNote() } }}
               />
-              <button
-                onClick={addNote}
-                disabled={savingNote || !newNote.trim()}
-                className="bg-violet-600 hover:bg-violet-700 text-white text-sm px-4 rounded-lg transition disabled:opacity-50 self-end py-2"
-              >
+              <button onClick={addNote} disabled={savingNote || !newNote.trim()} className="bg-violet-600 hover:bg-violet-700 text-white text-sm px-4 rounded-lg transition disabled:opacity-50 self-end py-2">
                 Add
               </button>
             </div>
-
-            {/* Notes list */}
             {notes.length === 0 ? (
               <div className="text-center py-8 text-gray-500">
                 <p className="text-2xl mb-2">📝</p>
@@ -461,12 +453,7 @@ export default function Home() {
                   <div key={note.id} className="bg-gray-800 rounded-lg p-4 group">
                     <div className="flex items-start justify-between gap-2">
                       <p className="text-gray-300 text-sm leading-relaxed flex-1">{note.content}</p>
-                      <button
-                        onClick={() => deleteNote(note.id)}
-                        className="text-gray-600 hover:text-red-400 transition opacity-0 group-hover:opacity-100 text-xs flex-shrink-0"
-                      >
-                        ✕
-                      </button>
+                      <button onClick={() => deleteNote(note.id)} className="text-gray-600 hover:text-red-400 transition opacity-0 group-hover:opacity-100 text-xs flex-shrink-0">✕</button>
                     </div>
                     <p className="text-gray-600 text-xs mt-2">{formatDate(note.created_at)}</p>
                   </div>
