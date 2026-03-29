@@ -1,0 +1,1788 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>AI Job Application Tracker — System Design</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=Fraunces:opsz,wght@9..144,300;400;500&family=DM+Sans:wght@300;400;500;600&display=swap');
+
+  :root {
+    --bg: #0d0f14;
+    --bg2: #13161e;
+    --bg3: #1a1e2a;
+    --bg4: #212638;
+    --border: rgba(255,255,255,0.07);
+    --border2: rgba(255,255,255,0.12);
+    --text: #e8eaf2;
+    --muted: #7a7f96;
+    --accent: #6c63ff;
+    --accent2: #a78bfa;
+    --teal: #2dd4bf;
+    --amber: #f59e0b;
+    --coral: #f87171;
+    --green: #34d399;
+    --blue: #60a5fa;
+    --pink: #f472b6;
+    --font-display: 'Fraunces', Georgia, serif;
+    --font-body: 'DM Sans', system-ui, sans-serif;
+    --font-mono: 'DM Mono', 'Cascadia Code', monospace;
+  }
+
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  html { scroll-behavior: smooth; }
+
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: var(--font-body);
+    font-size: 15px;
+    line-height: 1.7;
+    min-height: 100vh;
+  }
+
+  /* NAV */
+  nav {
+    position: sticky;
+    top: 0;
+    z-index: 100;
+    background: rgba(13,15,20,0.92);
+    backdrop-filter: blur(16px);
+    border-bottom: 1px solid var(--border);
+    display: flex;
+    align-items: center;
+    gap: 0;
+    padding: 0 2rem;
+    height: 52px;
+    overflow-x: auto;
+    scrollbar-width: none;
+  }
+  nav::-webkit-scrollbar { display: none; }
+  .nav-logo {
+    font-family: var(--font-display);
+    font-weight: 400;
+    font-size: 16px;
+    color: var(--accent2);
+    white-space: nowrap;
+    margin-right: 2rem;
+    flex-shrink: 0;
+  }
+  nav a {
+    color: var(--muted);
+    text-decoration: none;
+    font-size: 12px;
+    font-weight: 500;
+    letter-spacing: 0.05em;
+    text-transform: uppercase;
+    padding: 0 14px;
+    height: 52px;
+    display: flex;
+    align-items: center;
+    white-space: nowrap;
+    border-bottom: 2px solid transparent;
+    transition: color 0.2s, border-color 0.2s;
+  }
+  nav a:hover { color: var(--text); border-bottom-color: var(--accent); }
+
+  /* LAYOUT */
+  .page { max-width: 1100px; margin: 0 auto; padding: 0 2rem 6rem; }
+
+  /* HERO */
+  .hero {
+    padding: 5rem 0 4rem;
+    border-bottom: 1px solid var(--border);
+    margin-bottom: 5rem;
+    position: relative;
+    overflow: hidden;
+  }
+  .hero::before {
+    content: '';
+    position: absolute;
+    top: -80px; left: -80px;
+    width: 500px; height: 500px;
+    background: radial-gradient(circle, rgba(108,99,255,0.12) 0%, transparent 70%);
+    pointer-events: none;
+  }
+  .hero-eyebrow {
+    font-size: 11px;
+    font-weight: 600;
+    letter-spacing: 0.15em;
+    text-transform: uppercase;
+    color: var(--accent);
+    margin-bottom: 1.5rem;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+  .hero-eyebrow::before { content: ''; width: 24px; height: 1px; background: var(--accent); }
+  h1 {
+    font-family: var(--font-display);
+    font-size: clamp(2.5rem, 5vw, 4.5rem);
+    font-weight: 300;
+    line-height: 1.1;
+    letter-spacing: -0.02em;
+    color: var(--text);
+    margin-bottom: 1.5rem;
+  }
+  h1 em { font-style: normal; color: var(--accent2); }
+  .hero-desc {
+    font-size: 17px;
+    color: var(--muted);
+    max-width: 640px;
+    line-height: 1.8;
+    margin-bottom: 2.5rem;
+  }
+  .hero-meta {
+    display: flex;
+    gap: 2rem;
+    flex-wrap: wrap;
+  }
+  .meta-item { font-size: 13px; color: var(--muted); }
+  .meta-item strong { color: var(--text); display: block; font-size: 15px; }
+
+  /* SECTIONS */
+  section {
+    margin-bottom: 5rem;
+    scroll-margin-top: 60px;
+  }
+  .section-label {
+    font-size: 10px;
+    font-weight: 600;
+    letter-spacing: 0.2em;
+    text-transform: uppercase;
+    color: var(--accent);
+    margin-bottom: 0.5rem;
+  }
+  h2 {
+    font-family: var(--font-display);
+    font-size: clamp(1.6rem, 3vw, 2.4rem);
+    font-weight: 300;
+    letter-spacing: -0.02em;
+    margin-bottom: 1.5rem;
+    line-height: 1.2;
+  }
+  h3 {
+    font-size: 14px;
+    font-weight: 600;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--teal);
+    margin-bottom: 1rem;
+    margin-top: 2.5rem;
+  }
+  h3:first-child { margin-top: 0; }
+  p { margin-bottom: 1rem; color: var(--muted); }
+  p strong { color: var(--text); font-weight: 500; }
+
+  /* ARCH DIAGRAM */
+  .arch-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 1px;
+    background: var(--border);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    overflow: hidden;
+    margin: 2rem 0;
+  }
+  .arch-cell {
+    background: var(--bg2);
+    padding: 1.5rem;
+    position: relative;
+  }
+  .arch-cell-label {
+    font-size: 10px;
+    font-weight: 600;
+    letter-spacing: 0.15em;
+    text-transform: uppercase;
+    color: var(--muted);
+    margin-bottom: 0.5rem;
+  }
+  .arch-cell-title {
+    font-size: 15px;
+    font-weight: 500;
+    color: var(--text);
+    margin-bottom: 0.5rem;
+  }
+  .arch-cell-desc { font-size: 13px; color: var(--muted); line-height: 1.6; }
+  .arch-cell-badge {
+    display: inline-block;
+    margin-top: 0.75rem;
+    padding: 2px 10px;
+    border-radius: 999px;
+    font-size: 11px;
+    font-weight: 500;
+  }
+  .badge-purple { background: rgba(108,99,255,0.15); color: var(--accent2); }
+  .badge-teal { background: rgba(45,212,191,0.12); color: var(--teal); }
+  .badge-amber { background: rgba(245,158,11,0.12); color: var(--amber); }
+  .badge-coral { background: rgba(248,113,113,0.12); color: var(--coral); }
+  .badge-green { background: rgba(52,211,153,0.12); color: var(--green); }
+  .badge-blue { background: rgba(96,165,250,0.12); color: var(--blue); }
+
+  /* FLOW DIAGRAM */
+  .flow-wrapper {
+    background: var(--bg2);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 2rem;
+    margin: 2rem 0;
+    overflow-x: auto;
+  }
+  .flow-track {
+    display: flex;
+    align-items: center;
+    gap: 0;
+    min-width: max-content;
+  }
+  .flow-box {
+    background: var(--bg3);
+    border: 1px solid var(--border2);
+    border-radius: 8px;
+    padding: 0.75rem 1.25rem;
+    text-align: center;
+    min-width: 130px;
+  }
+  .flow-box-label { font-size: 11px; color: var(--muted); margin-bottom: 3px; }
+  .flow-box-name { font-size: 13px; font-weight: 500; color: var(--text); }
+  .flow-arrow {
+    color: var(--muted);
+    padding: 0 8px;
+    font-size: 18px;
+    flex-shrink: 0;
+  }
+
+  /* TECH STACK */
+  .stack-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+    gap: 1rem;
+    margin: 2rem 0;
+  }
+  .stack-card {
+    background: var(--bg2);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 1.25rem;
+    position: relative;
+    overflow: hidden;
+    transition: border-color 0.2s;
+  }
+  .stack-card:hover { border-color: var(--border2); }
+  .stack-card-accent {
+    position: absolute;
+    top: 0; left: 0; right: 0;
+    height: 2px;
+  }
+  .stack-card-tier { font-size: 10px; font-weight: 600; letter-spacing: 0.15em; text-transform: uppercase; color: var(--muted); margin-bottom: 0.4rem; }
+  .stack-card-name { font-size: 16px; font-weight: 500; color: var(--text); margin-bottom: 0.4rem; }
+  .stack-card-reason { font-size: 13px; color: var(--muted); line-height: 1.6; }
+  .stack-card-alts { font-size: 12px; color: var(--muted); margin-top: 0.75rem; }
+  .stack-card-alts span { color: var(--muted); opacity: 0.7; }
+
+  /* SCHEMA */
+  .schema-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+    gap: 1rem;
+    margin: 2rem 0;
+  }
+  .schema-table {
+    background: var(--bg2);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    overflow: hidden;
+  }
+  .schema-header {
+    background: var(--bg3);
+    padding: 0.75rem 1rem;
+    border-bottom: 1px solid var(--border);
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+  .schema-table-name { font-size: 14px; font-weight: 600; color: var(--text); font-family: var(--font-mono); }
+  .schema-pk { font-size: 10px; background: rgba(108,99,255,0.15); color: var(--accent2); padding: 1px 6px; border-radius: 4px; font-family: var(--font-mono); }
+  .schema-row {
+    display: flex;
+    align-items: center;
+    padding: 0.5rem 1rem;
+    border-bottom: 1px solid var(--border);
+    gap: 8px;
+    font-family: var(--font-mono);
+    font-size: 12px;
+  }
+  .schema-row:last-child { border-bottom: none; }
+  .schema-col-name { color: var(--text); min-width: 130px; }
+  .schema-col-type { color: var(--teal); min-width: 90px; }
+  .schema-col-constraint { color: var(--amber); font-size: 11px; }
+  .schema-col-fk { color: var(--pink); font-size: 11px; }
+
+  /* CODE BLOCKS */
+  .code-block {
+    background: var(--bg2);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    overflow: hidden;
+    margin: 1.5rem 0;
+  }
+  .code-header {
+    background: var(--bg3);
+    padding: 0.6rem 1rem;
+    border-bottom: 1px solid var(--border);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+  }
+  .code-filename { font-size: 12px; color: var(--muted); font-family: var(--font-mono); }
+  .code-lang {
+    font-size: 10px;
+    font-weight: 600;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: var(--accent);
+  }
+  pre {
+    padding: 1.25rem;
+    overflow-x: auto;
+    font-family: var(--font-mono);
+    font-size: 12.5px;
+    line-height: 1.75;
+    color: var(--text);
+    margin: 0;
+    tab-size: 2;
+  }
+  .kw { color: var(--accent2); }
+  .str { color: var(--green); }
+  .cmnt { color: var(--muted); font-style: italic; }
+  .fn { color: var(--teal); }
+  .cls { color: var(--amber); }
+  .dec { color: var(--coral); }
+  .num { color: var(--blue); }
+  .py-type { color: var(--pink); }
+
+  /* API ENDPOINTS */
+  .endpoint-list { margin: 1.5rem 0; }
+  .endpoint {
+    display: grid;
+    grid-template-columns: 80px 220px 1fr;
+    align-items: start;
+    gap: 1rem;
+    padding: 0.75rem 1rem;
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    margin-bottom: 0.5rem;
+    background: var(--bg2);
+    font-family: var(--font-mono);
+    font-size: 12.5px;
+    transition: border-color 0.2s;
+  }
+  .endpoint:hover { border-color: var(--border2); }
+  .method {
+    font-weight: 600;
+    font-size: 11px;
+    letter-spacing: 0.05em;
+    padding: 3px 8px;
+    border-radius: 4px;
+    text-align: center;
+    font-family: var(--font-mono);
+  }
+  .GET { background: rgba(52,211,153,0.12); color: var(--green); }
+  .POST { background: rgba(96,165,250,0.12); color: var(--blue); }
+  .PUT, .PATCH { background: rgba(245,158,11,0.12); color: var(--amber); }
+  .DELETE { background: rgba(248,113,113,0.12); color: var(--coral); }
+  .endpoint-path { color: var(--text); }
+  .endpoint-desc { color: var(--muted); font-family: var(--font-body); font-size: 12.5px; }
+  .section-group { font-size: 11px; font-weight: 600; letter-spacing: 0.12em; text-transform: uppercase; color: var(--muted); margin: 1.5rem 0 0.5rem; padding-left: 1rem; }
+
+  /* STEPS */
+  .step-list { margin: 2rem 0; }
+  .step {
+    display: grid;
+    grid-template-columns: 48px 1fr;
+    gap: 1.5rem;
+    margin-bottom: 2.5rem;
+    position: relative;
+  }
+  .step::before {
+    content: '';
+    position: absolute;
+    left: 23px;
+    top: 48px;
+    bottom: -12px;
+    width: 1px;
+    background: var(--border);
+  }
+  .step:last-child::before { display: none; }
+  .step-num {
+    width: 48px; height: 48px;
+    border: 1px solid var(--border2);
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-family: var(--font-mono);
+    font-size: 13px;
+    font-weight: 500;
+    color: var(--accent2);
+    background: var(--bg2);
+    flex-shrink: 0;
+  }
+  .step-content {}
+  .step-title { font-size: 17px; font-weight: 500; color: var(--text); margin-bottom: 0.5rem; }
+  .step-body { font-size: 14px; color: var(--muted); margin-bottom: 1rem; line-height: 1.7; }
+
+  /* DEPLOYMENT */
+  .deploy-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 1rem;
+    margin: 2rem 0;
+  }
+  .deploy-card {
+    background: var(--bg2);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 1.5rem;
+  }
+  .deploy-card h4 {
+    font-size: 14px;
+    font-weight: 600;
+    color: var(--text);
+    margin-bottom: 0.75rem;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+  .deploy-dot {
+    width: 8px; height: 8px;
+    border-radius: 50%;
+  }
+
+  /* CALLOUT */
+  .callout {
+    border-left: 3px solid;
+    padding: 1rem 1.25rem;
+    border-radius: 0 8px 8px 0;
+    margin: 1.5rem 0;
+    font-size: 13.5px;
+    line-height: 1.7;
+  }
+  .callout-info { border-color: var(--blue); background: rgba(96,165,250,0.06); color: var(--blue); }
+  .callout-warn { border-color: var(--amber); background: rgba(245,158,11,0.06); color: var(--amber); }
+  .callout-success { border-color: var(--green); background: rgba(52,211,153,0.06); color: var(--green); }
+  .callout strong { display: block; margin-bottom: 0.25rem; font-weight: 600; }
+
+  /* INTERACTIVE PIPELINE */
+  .pipeline {
+    background: var(--bg2);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 2rem;
+    margin: 2rem 0;
+  }
+  .pipeline-row {
+    display: flex;
+    gap: 0;
+    align-items: stretch;
+    margin-bottom: 1px;
+  }
+  .pipeline-phase {
+    flex: 1;
+    background: var(--bg3);
+    border: 1px solid var(--border);
+    padding: 1rem;
+    position: relative;
+    cursor: pointer;
+    transition: background 0.15s, border-color 0.15s;
+  }
+  .pipeline-phase:hover { background: var(--bg4); border-color: var(--border2); }
+  .pipeline-phase.active { border-color: var(--accent); background: rgba(108,99,255,0.08); }
+  .pipeline-phase-label { font-size: 10px; font-weight: 600; letter-spacing: 0.15em; text-transform: uppercase; color: var(--muted); margin-bottom: 4px; }
+  .pipeline-phase-name { font-size: 14px; font-weight: 500; color: var(--text); }
+  .pipeline-detail {
+    background: var(--bg3);
+    border: 1px solid var(--accent);
+    border-top: none;
+    border-radius: 0 0 8px 8px;
+    padding: 1.25rem;
+    display: none;
+    font-size: 13px;
+    color: var(--muted);
+  }
+  .pipeline-detail.visible { display: block; }
+
+  /* AI FEATURES */
+  .ai-feature {
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 1.5rem;
+    margin-bottom: 1rem;
+    background: var(--bg2);
+    display: grid;
+    grid-template-columns: 40px 1fr;
+    gap: 1rem;
+  }
+  .ai-icon {
+    width: 40px; height: 40px;
+    border-radius: 8px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 18px;
+    flex-shrink: 0;
+  }
+  .ai-feature-title { font-size: 15px; font-weight: 500; color: var(--text); margin-bottom: 4px; }
+  .ai-feature-desc { font-size: 13px; color: var(--muted); line-height: 1.6; }
+
+  /* ENV VARS TABLE */
+  .env-table { width: 100%; border-collapse: collapse; margin: 1.5rem 0; font-size: 13px; }
+  .env-table th { text-align: left; padding: 0.5rem 1rem; color: var(--muted); font-size: 11px; font-weight: 600; letter-spacing: 0.1em; text-transform: uppercase; border-bottom: 1px solid var(--border); }
+  .env-table td { padding: 0.6rem 1rem; border-bottom: 1px solid var(--border); font-family: var(--font-mono); }
+  .env-table tr:last-child td { border-bottom: none; }
+  .env-table td:first-child { color: var(--teal); }
+  .env-table td:last-child { color: var(--muted); font-family: var(--font-body); font-size: 12px; }
+
+  /* FOOTER */
+  footer {
+    border-top: 1px solid var(--border);
+    padding: 2rem 0;
+    text-align: center;
+    font-size: 12px;
+    color: var(--muted);
+  }
+
+  @media (max-width: 768px) {
+    .arch-grid { grid-template-columns: 1fr; }
+    .deploy-grid { grid-template-columns: 1fr; }
+    .endpoint { grid-template-columns: 70px 1fr; }
+    .endpoint-desc { grid-column: 1 / -1; }
+  }
+</style>
+</head>
+<body>
+
+<nav>
+  <span class="nav-logo">JobTracker AI</span>
+  <a href="#architecture">Architecture</a>
+  <a href="#stack">Tech Stack</a>
+  <a href="#schema">Database</a>
+  <a href="#api">API Design</a>
+  <a href="#implementation">Implementation</a>
+  <a href="#ai-features">AI Features</a>
+  <a href="#deployment">Deployment</a>
+</nav>
+
+<div class="page">
+
+  <!-- HERO -->
+  <div class="hero">
+    <p class="hero-eyebrow">System Design Document</p>
+    <h1>AI-Powered<br><em>Job Application</em><br>Tracker</h1>
+    <p class="hero-desc">
+      A production-grade SaaS platform built on clean architecture principles. This document covers every layer — from database schema through AI integration to deployment strategy. Zero hand-waving.
+    </p>
+    <div class="hero-meta">
+      <div class="meta-item"><strong>Frontend</strong>Next.js 14 · React 18 · TypeScript</div>
+      <div class="meta-item"><strong>Backend</strong>FastAPI · Python 3.12 · SQLAlchemy</div>
+      <div class="meta-item"><strong>Database</strong>PostgreSQL 16 · Redis · Pinecone</div>
+      <div class="meta-item"><strong>AI Layer</strong>OpenAI GPT-4o · Embeddings API</div>
+      <div class="meta-item"><strong>Auth</strong>Clerk · JWT · Row-Level Security</div>
+      <div class="meta-item"><strong>Infra</strong>Railway · Vercel · Cloudflare</div>
+    </div>
+  </div>
+
+  <!-- SECTION 1: ARCHITECTURE -->
+  <section id="architecture">
+    <p class="section-label">Section 01</p>
+    <h2>System Architecture</h2>
+    <p>The system follows a <strong>clean, layered architecture</strong> with strict separation of concerns. The frontend is a statically optimized Next.js app with server components. The backend is a FastAPI service exposing a versioned REST API. An AI worker process handles async intelligence tasks off the critical path.</p>
+
+    <div class="arch-grid">
+      <div class="arch-cell">
+        <div class="arch-cell-label">Client Layer</div>
+        <div class="arch-cell-title">Next.js Frontend</div>
+        <div class="arch-cell-desc">React Server Components for initial page load, client components for interactivity. Deployed to Vercel edge network. Communicates only with the API gateway.</div>
+        <span class="arch-cell-badge badge-purple">Vercel Edge</span>
+      </div>
+      <div class="arch-cell">
+        <div class="arch-cell-label">Auth Layer</div>
+        <div class="arch-cell-title">Clerk (Identity)</div>
+        <div class="arch-cell-desc">Handles all authentication flows — OAuth (Google, GitHub), magic links, MFA. Issues short-lived JWTs verified by the API. No credentials touch our servers.</div>
+        <span class="arch-cell-badge badge-teal">Zero Trust</span>
+      </div>
+      <div class="arch-cell">
+        <div class="arch-cell-label">CDN / Proxy</div>
+        <div class="arch-cell-title">Cloudflare</div>
+        <div class="arch-cell-desc">WAF, DDoS mitigation, rate limiting, asset caching, and SSL termination. API requests proxy to Railway. Static assets served from edge.</div>
+        <span class="arch-cell-badge badge-amber">WAF + CDN</span>
+      </div>
+      <div class="arch-cell">
+        <div class="arch-cell-label">API Layer</div>
+        <div class="arch-cell-title">FastAPI Service</div>
+        <div class="arch-cell-desc">Async Python API with automatic OpenAPI docs. JWT middleware validates all requests. Organized into domain routers. Thin controllers delegate to service layer.</div>
+        <span class="arch-cell-badge badge-blue">Railway / GCP</span>
+      </div>
+      <div class="arch-cell">
+        <div class="arch-cell-label">AI Worker</div>
+        <div class="arch-cell-title">Celery + Redis</div>
+        <div class="arch-cell-desc">Async task queue for AI processing. Resume parsing, job match scoring, interview prep generation — all run as background jobs to keep API response times &lt;100ms.</div>
+        <span class="arch-cell-badge badge-coral">Async Queue</span>
+      </div>
+      <div class="arch-cell">
+        <div class="arch-cell-label">Data Layer</div>
+        <div class="arch-cell-title">PostgreSQL + Redis</div>
+        <div class="arch-cell-desc">Postgres for relational data with Row-Level Security. Redis for sessions, cache, and Celery broker. Pinecone for vector similarity search (job matching).</div>
+        <span class="arch-cell-badge badge-green">Multi-store</span>
+      </div>
+    </div>
+
+    <h3>Request Lifecycle</h3>
+    <div class="flow-wrapper">
+      <div class="flow-track">
+        <div class="flow-box"><div class="flow-box-label">User</div><div class="flow-box-name">Browser</div></div>
+        <div class="flow-arrow">→</div>
+        <div class="flow-box"><div class="flow-box-label">Edge</div><div class="flow-box-name">Cloudflare WAF</div></div>
+        <div class="flow-arrow">→</div>
+        <div class="flow-box"><div class="flow-box-label">Frontend</div><div class="flow-box-name">Next.js / Vercel</div></div>
+        <div class="flow-arrow">→</div>
+        <div class="flow-box"><div class="flow-box-label">Auth</div><div class="flow-box-name">Clerk SDK</div></div>
+        <div class="flow-arrow">→</div>
+        <div class="flow-box"><div class="flow-box-label">API</div><div class="flow-box-name">FastAPI</div></div>
+        <div class="flow-arrow">→</div>
+        <div class="flow-box"><div class="flow-box-label">Data</div><div class="flow-box-name">PostgreSQL</div></div>
+      </div>
+    </div>
+
+    <div class="callout callout-info">
+      <strong>Design Principle: AI off the critical path</strong>
+      All AI inference (GPT-4o calls, embedding generation, resume analysis) is enqueued to Celery workers and processed asynchronously. The API returns immediately with a job ID. The frontend polls or uses WebSockets to receive results. This keeps p99 API latency under 120ms regardless of AI processing time.
+    </div>
+  </section>
+
+  <!-- SECTION 2: TECH STACK -->
+  <section id="stack">
+    <p class="section-label">Section 02</p>
+    <h2>Tech Stack Justification</h2>
+    <p>Each technology choice is deliberate. Here's the rationale for every major decision and what was considered but rejected.</p>
+
+    <div class="stack-grid">
+      <div class="stack-card">
+        <div class="stack-card-accent" style="background: linear-gradient(90deg, #6c63ff, #a78bfa);"></div>
+        <div class="stack-card-tier">Frontend Framework</div>
+        <div class="stack-card-name">Next.js 14 (App Router)</div>
+        <div class="stack-card-reason">Server Components reduce JS bundle by ~60%. Built-in image optimization, code splitting, and Vercel deployment make it production-ready out of the box. App Router enables granular caching strategies per route.</div>
+        <div class="stack-card-alts"><span>Rejected:</span> Remix (smaller ecosystem), Vite SPA (no SSR, worse SEO/performance)</div>
+      </div>
+      <div class="stack-card">
+        <div class="stack-card-accent" style="background: linear-gradient(90deg, #2dd4bf, #34d399);"></div>
+        <div class="stack-card-tier">Backend Framework</div>
+        <div class="stack-card-name">FastAPI (Python)</div>
+        <div class="stack-card-reason">Async-native, automatic OpenAPI docs, excellent type safety via Pydantic v2. The Python ecosystem is essential for AI/ML integrations (LangChain, OpenAI SDK, spaCy). 3x faster than Flask/Django for I/O-bound tasks.</div>
+        <div class="stack-card-alts"><span>Rejected:</span> Django (sync overhead), Express (weaker AI ecosystem), Rails (wrong language for AI)</div>
+      </div>
+      <div class="stack-card">
+        <div class="stack-card-accent" style="background: linear-gradient(90deg, #f59e0b, #f87171);"></div>
+        <div class="stack-card-tier">Primary Database</div>
+        <div class="stack-card-name">PostgreSQL 16</div>
+        <div class="stack-card-reason">Row-Level Security for multi-tenancy at the DB layer — the safest approach for SaaS data isolation. JSONB columns for flexible job posting metadata. Full-text search via pg_trgm. Mature, battle-tested.</div>
+        <div class="stack-card-alts"><span>Rejected:</span> MySQL (weaker JSON support, no RLS), MongoDB (overkill flexibility, worse joins)</div>
+      </div>
+      <div class="stack-card">
+        <div class="stack-card-accent" style="background: linear-gradient(90deg, #60a5fa, #6c63ff);"></div>
+        <div class="stack-card-tier">Authentication</div>
+        <div class="stack-card-name">Clerk</div>
+        <div class="stack-card-reason">Complete auth solution with prebuilt UI components, OAuth providers, magic links, MFA, and session management. Eliminates auth surface area from our codebase. JWTs are verifiable without network calls.</div>
+        <div class="stack-card-alts"><span>Rejected:</span> Auth0 (more expensive), Supabase Auth (vendor lock-in to Supabase stack), custom JWT (security risk)</div>
+      </div>
+      <div class="stack-card">
+        <div class="stack-card-accent" style="background: linear-gradient(90deg, #f472b6, #a78bfa);"></div>
+        <div class="stack-card-tier">Task Queue</div>
+        <div class="stack-card-name">Celery + Redis</div>
+        <div class="stack-card-reason">Industry-standard Python async task queue. Redis serves dual duty as the message broker and result backend. Retry logic, task routing, and monitoring (Flower) built in. Scales to multiple workers trivially.</div>
+        <div class="stack-card-alts"><span>Rejected:</span> RQ (less features), Dramatiq (smaller ecosystem), SQS (adds AWS dependency)</div>
+      </div>
+      <div class="stack-card">
+        <div class="stack-card-accent" style="background: linear-gradient(90deg, #34d399, #2dd4bf);"></div>
+        <div class="stack-card-tier">Vector Search</div>
+        <div class="stack-card-name">Pinecone</div>
+        <div class="stack-card-reason">Managed vector database for job-to-resume similarity search. Serverless tier is cost-efficient at low volume. Sub-millisecond ANN queries. Handles embedding storage and retrieval so we don't hack this into PostgreSQL.</div>
+        <div class="stack-card-alts"><span>Rejected:</span> pgvector (slower at scale), Weaviate (self-hosted complexity), Qdrant (less managed tooling)</div>
+      </div>
+    </div>
+  </section>
+
+  <!-- SECTION 3: DATABASE SCHEMA -->
+  <section id="schema">
+    <p class="section-label">Section 03</p>
+    <h2>Database Schema</h2>
+    <p>The schema is normalized to 3NF where practical, with strategic denormalization for read-heavy paths. Row-Level Security policies enforce tenant isolation at the Postgres layer — defense in depth beyond application-level checks.</p>
+
+    <div class="schema-grid">
+      <div class="schema-table">
+        <div class="schema-header">
+          <span class="schema-table-name">users</span>
+          <span class="schema-pk">Clerk-synced</span>
+        </div>
+        <div class="schema-row">
+          <span class="schema-col-name">id</span>
+          <span class="schema-col-type">UUID</span>
+          <span class="schema-col-constraint">PK DEFAULT gen_random_uuid()</span>
+        </div>
+        <div class="schema-row">
+          <span class="schema-col-name">clerk_user_id</span>
+          <span class="schema-col-type">TEXT</span>
+          <span class="schema-col-constraint">UNIQUE NOT NULL</span>
+        </div>
+        <div class="schema-row">
+          <span class="schema-col-name">email</span>
+          <span class="schema-col-type">TEXT</span>
+          <span class="schema-col-constraint">UNIQUE NOT NULL</span>
+        </div>
+        <div class="schema-row">
+          <span class="schema-col-name">full_name</span>
+          <span class="schema-col-type">TEXT</span>
+          <span class="schema-col-constraint">NOT NULL</span>
+        </div>
+        <div class="schema-row">
+          <span class="schema-col-name">plan_tier</span>
+          <span class="schema-col-type">TEXT</span>
+          <span class="schema-col-constraint">DEFAULT 'free'</span>
+        </div>
+        <div class="schema-row">
+          <span class="schema-col-name">created_at</span>
+          <span class="schema-col-type">TIMESTAMPTZ</span>
+          <span class="schema-col-constraint">DEFAULT NOW()</span>
+        </div>
+        <div class="schema-row">
+          <span class="schema-col-name">stripe_customer_id</span>
+          <span class="schema-col-type">TEXT</span>
+          <span class="schema-col-constraint">NULLABLE</span>
+        </div>
+      </div>
+
+      <div class="schema-table">
+        <div class="schema-header">
+          <span class="schema-table-name">applications</span>
+        </div>
+        <div class="schema-row">
+          <span class="schema-col-name">id</span>
+          <span class="schema-col-type">UUID</span>
+          <span class="schema-col-constraint">PK</span>
+        </div>
+        <div class="schema-row">
+          <span class="schema-col-name">user_id</span>
+          <span class="schema-col-type">UUID</span>
+          <span class="schema-col-fk">FK → users.id</span>
+        </div>
+        <div class="schema-row">
+          <span class="schema-col-name">company_name</span>
+          <span class="schema-col-type">TEXT</span>
+          <span class="schema-col-constraint">NOT NULL</span>
+        </div>
+        <div class="schema-row">
+          <span class="schema-col-name">job_title</span>
+          <span class="schema-col-type">TEXT</span>
+          <span class="schema-col-constraint">NOT NULL</span>
+        </div>
+        <div class="schema-row">
+          <span class="schema-col-name">status</span>
+          <span class="schema-col-type">TEXT</span>
+          <span class="schema-col-constraint">NOT NULL CHECK (status IN (...))</span>
+        </div>
+        <div class="schema-row">
+          <span class="schema-col-name">applied_date</span>
+          <span class="schema-col-type">DATE</span>
+          <span class="schema-col-constraint">NOT NULL</span>
+        </div>
+        <div class="schema-row">
+          <span class="schema-col-name">job_description</span>
+          <span class="schema-col-type">TEXT</span>
+          <span class="schema-col-constraint">NULLABLE</span>
+        </div>
+        <div class="schema-row">
+          <span class="schema-col-name">salary_min</span>
+          <span class="schema-col-type">INTEGER</span>
+          <span class="schema-col-constraint">NULLABLE</span>
+        </div>
+        <div class="schema-row">
+          <span class="schema-col-name">salary_max</span>
+          <span class="schema-col-type">INTEGER</span>
+          <span class="schema-col-constraint">NULLABLE</span>
+        </div>
+        <div class="schema-row">
+          <span class="schema-col-name">source</span>
+          <span class="schema-col-type">TEXT</span>
+          <span class="schema-col-constraint">NULLABLE</span>
+        </div>
+        <div class="schema-row">
+          <span class="schema-col-name">ai_match_score</span>
+          <span class="schema-col-type">FLOAT</span>
+          <span class="schema-col-constraint">NULLABLE</span>
+        </div>
+        <div class="schema-row">
+          <span class="schema-col-name">metadata</span>
+          <span class="schema-col-type">JSONB</span>
+          <span class="schema-col-constraint">DEFAULT '{}'</span>
+        </div>
+        <div class="schema-row">
+          <span class="schema-col-name">created_at</span>
+          <span class="schema-col-type">TIMESTAMPTZ</span>
+          <span class="schema-col-constraint">DEFAULT NOW()</span>
+        </div>
+        <div class="schema-row">
+          <span class="schema-col-name">updated_at</span>
+          <span class="schema-col-type">TIMESTAMPTZ</span>
+          <span class="schema-col-constraint">AUTO-UPDATED</span>
+        </div>
+      </div>
+
+      <div class="schema-table">
+        <div class="schema-header">
+          <span class="schema-table-name">events</span>
+          <span class="schema-pk">Timeline</span>
+        </div>
+        <div class="schema-row">
+          <span class="schema-col-name">id</span>
+          <span class="schema-col-type">UUID</span>
+          <span class="schema-col-constraint">PK</span>
+        </div>
+        <div class="schema-row">
+          <span class="schema-col-name">application_id</span>
+          <span class="schema-col-type">UUID</span>
+          <span class="schema-col-fk">FK → applications.id</span>
+        </div>
+        <div class="schema-row">
+          <span class="schema-col-name">event_type</span>
+          <span class="schema-col-type">TEXT</span>
+          <span class="schema-col-constraint">NOT NULL</span>
+        </div>
+        <div class="schema-row">
+          <span class="schema-col-name">event_date</span>
+          <span class="schema-col-type">TIMESTAMPTZ</span>
+          <span class="schema-col-constraint">NOT NULL</span>
+        </div>
+        <div class="schema-row">
+          <span class="schema-col-name">notes</span>
+          <span class="schema-col-type">TEXT</span>
+          <span class="schema-col-constraint">NULLABLE</span>
+        </div>
+        <div class="schema-row">
+          <span class="schema-col-name">metadata</span>
+          <span class="schema-col-type">JSONB</span>
+          <span class="schema-col-constraint">DEFAULT '{}'</span>
+        </div>
+      </div>
+
+      <div class="schema-table">
+        <div class="schema-header">
+          <span class="schema-table-name">resumes</span>
+        </div>
+        <div class="schema-row">
+          <span class="schema-col-name">id</span>
+          <span class="schema-col-type">UUID</span>
+          <span class="schema-col-constraint">PK</span>
+        </div>
+        <div class="schema-row">
+          <span class="schema-col-name">user_id</span>
+          <span class="schema-col-type">UUID</span>
+          <span class="schema-col-fk">FK → users.id</span>
+        </div>
+        <div class="schema-row">
+          <span class="schema-col-name">label</span>
+          <span class="schema-col-type">TEXT</span>
+          <span class="schema-col-constraint">NOT NULL</span>
+        </div>
+        <div class="schema-row">
+          <span class="schema-col-name">raw_text</span>
+          <span class="schema-col-type">TEXT</span>
+          <span class="schema-col-constraint">NOT NULL</span>
+        </div>
+        <div class="schema-row">
+          <span class="schema-col-name">parsed_skills</span>
+          <span class="schema-col-type">JSONB</span>
+          <span class="schema-col-constraint">DEFAULT '[]'</span>
+        </div>
+        <div class="schema-row">
+          <span class="schema-col-name">embedding_id</span>
+          <span class="schema-col-type">TEXT</span>
+          <span class="schema-col-constraint">NULLABLE (Pinecone ref)</span>
+        </div>
+        <div class="schema-row">
+          <span class="schema-col-name">is_primary</span>
+          <span class="schema-col-type">BOOLEAN</span>
+          <span class="schema-col-constraint">DEFAULT false</span>
+        </div>
+        <div class="schema-row">
+          <span class="schema-col-name">s3_key</span>
+          <span class="schema-col-type">TEXT</span>
+          <span class="schema-col-constraint">NULLABLE</span>
+        </div>
+        <div class="schema-row">
+          <span class="schema-col-name">created_at</span>
+          <span class="schema-col-type">TIMESTAMPTZ</span>
+          <span class="schema-col-constraint">DEFAULT NOW()</span>
+        </div>
+      </div>
+
+      <div class="schema-table">
+        <div class="schema-header">
+          <span class="schema-table-name">contacts</span>
+        </div>
+        <div class="schema-row">
+          <span class="schema-col-name">id</span>
+          <span class="schema-col-type">UUID</span>
+          <span class="schema-col-constraint">PK</span>
+        </div>
+        <div class="schema-row">
+          <span class="schema-col-name">application_id</span>
+          <span class="schema-col-type">UUID</span>
+          <span class="schema-col-fk">FK → applications.id</span>
+        </div>
+        <div class="schema-row">
+          <span class="schema-col-name">name</span>
+          <span class="schema-col-type">TEXT</span>
+          <span class="schema-col-constraint">NOT NULL</span>
+        </div>
+        <div class="schema-row">
+          <span class="schema-col-name">role</span>
+          <span class="schema-col-type">TEXT</span>
+          <span class="schema-col-constraint">NULLABLE</span>
+        </div>
+        <div class="schema-row">
+          <span class="schema-col-name">email</span>
+          <span class="schema-col-type">TEXT</span>
+          <span class="schema-col-constraint">NULLABLE</span>
+        </div>
+        <div class="schema-row">
+          <span class="schema-col-name">linkedin_url</span>
+          <span class="schema-col-type">TEXT</span>
+          <span class="schema-col-constraint">NULLABLE</span>
+        </div>
+        <div class="schema-row">
+          <span class="schema-col-name">notes</span>
+          <span class="schema-col-type">TEXT</span>
+          <span class="schema-col-constraint">NULLABLE</span>
+        </div>
+      </div>
+
+      <div class="schema-table">
+        <div class="schema-header">
+          <span class="schema-table-name">ai_tasks</span>
+          <span class="schema-pk">Async</span>
+        </div>
+        <div class="schema-row">
+          <span class="schema-col-name">id</span>
+          <span class="schema-col-type">UUID</span>
+          <span class="schema-col-constraint">PK</span>
+        </div>
+        <div class="schema-row">
+          <span class="schema-col-name">user_id</span>
+          <span class="schema-col-type">UUID</span>
+          <span class="schema-col-fk">FK → users.id</span>
+        </div>
+        <div class="schema-row">
+          <span class="schema-col-name">task_type</span>
+          <span class="schema-col-type">TEXT</span>
+          <span class="schema-col-constraint">NOT NULL</span>
+        </div>
+        <div class="schema-row">
+          <span class="schema-col-name">celery_task_id</span>
+          <span class="schema-col-type">TEXT</span>
+          <span class="schema-col-constraint">NULLABLE</span>
+        </div>
+        <div class="schema-row">
+          <span class="schema-col-name">status</span>
+          <span class="schema-col-type">TEXT</span>
+          <span class="schema-col-constraint">DEFAULT 'pending'</span>
+        </div>
+        <div class="schema-row">
+          <span class="schema-col-name">result</span>
+          <span class="schema-col-type">JSONB</span>
+          <span class="schema-col-constraint">NULLABLE</span>
+        </div>
+        <div class="schema-row">
+          <span class="schema-col-name">error</span>
+          <span class="schema-col-type">TEXT</span>
+          <span class="schema-col-constraint">NULLABLE</span>
+        </div>
+        <div class="schema-row">
+          <span class="schema-col-name">created_at</span>
+          <span class="schema-col-type">TIMESTAMPTZ</span>
+          <span class="schema-col-constraint">DEFAULT NOW()</span>
+        </div>
+        <div class="schema-row">
+          <span class="schema-col-name">completed_at</span>
+          <span class="schema-col-type">TIMESTAMPTZ</span>
+          <span class="schema-col-constraint">NULLABLE</span>
+        </div>
+      </div>
+    </div>
+
+    <h3>Row-Level Security Policies</h3>
+    <div class="code-block">
+      <div class="code-header">
+        <span class="code-filename">migrations/002_rls_policies.sql</span>
+        <span class="code-lang">SQL</span>
+      </div>
+      <pre><span class="cmnt">-- Enable RLS on all user-owned tables</span>
+<span class="kw">ALTER TABLE</span> applications <span class="kw">ENABLE ROW LEVEL SECURITY</span>;
+<span class="kw">ALTER TABLE</span> events <span class="kw">ENABLE ROW LEVEL SECURITY</span>;
+<span class="kw">ALTER TABLE</span> resumes <span class="kw">ENABLE ROW LEVEL SECURITY</span>;
+
+<span class="cmnt">-- Policy: users only see their own applications</span>
+<span class="kw">CREATE POLICY</span> applications_isolation <span class="kw">ON</span> applications
+  <span class="kw">USING</span> (user_id = current_setting(<span class="str">'app.current_user_id'</span>)::<span class="py-type">uuid</span>);
+
+<span class="cmnt">-- Policy: events isolated via application ownership</span>
+<span class="kw">CREATE POLICY</span> events_isolation <span class="kw">ON</span> events
+  <span class="kw">USING</span> (application_id <span class="kw">IN</span> (
+    <span class="kw">SELECT</span> id <span class="kw">FROM</span> applications
+    <span class="kw">WHERE</span> user_id = current_setting(<span class="str">'app.current_user_id'</span>)::<span class="py-type">uuid</span>
+  ));
+
+<span class="cmnt">-- Set user context on connection (called in middleware)</span>
+<span class="kw">SELECT</span> <span class="fn">set_config</span>(<span class="str">'app.current_user_id'</span>, :user_id, <span class="kw">true</span>);</pre>
+    </div>
+
+    <h3>Critical Indexes</h3>
+    <div class="code-block">
+      <div class="code-header">
+        <span class="code-filename">migrations/003_indexes.sql</span>
+        <span class="code-lang">SQL</span>
+      </div>
+      <pre><span class="cmnt">-- Most queried path: user's applications by status</span>
+<span class="kw">CREATE INDEX</span> idx_applications_user_status
+  <span class="kw">ON</span> applications(user_id, status, applied_date <span class="kw">DESC</span>);
+
+<span class="cmnt">-- Full-text search on company + job title</span>
+<span class="kw">CREATE INDEX</span> idx_applications_fts
+  <span class="kw">ON</span> applications <span class="kw">USING</span> GIN(
+    <span class="fn">to_tsvector</span>(<span class="str">'english'</span>, company_name || <span class="str">' '</span> || job_title)
+  );
+
+<span class="cmnt">-- Partial index: open applications only (most dashboard views)</span>
+<span class="kw">CREATE INDEX</span> idx_applications_open
+  <span class="kw">ON</span> applications(user_id, created_at <span class="kw">DESC</span>)
+  <span class="kw">WHERE</span> status <span class="kw">NOT IN</span> (<span class="str">'rejected'</span>, <span class="str">'withdrawn'</span>, <span class="str">'accepted'</span>);
+
+<span class="cmnt">-- Events timeline for application detail view</span>
+<span class="kw">CREATE INDEX</span> idx_events_application_date
+  <span class="kw">ON</span> events(application_id, event_date <span class="kw">DESC</span>);</pre>
+    </div>
+  </section>
+
+  <!-- SECTION 4: API DESIGN -->
+  <section id="api">
+    <p class="section-label">Section 04</p>
+    <h2>API Design</h2>
+    <p>RESTful API versioned under <code style="font-family: var(--font-mono); font-size: 13px; background: var(--bg3); padding: 2px 8px; border-radius: 4px; color: var(--teal);">/api/v1</code>. All endpoints require a valid Clerk JWT in the Authorization header. Responses follow a consistent envelope schema. Errors return RFC 7807 Problem Details.</p>
+
+    <h3>Applications</h3>
+    <div class="endpoint-list">
+      <div class="endpoint">
+        <span class="method GET">GET</span>
+        <span class="endpoint-path">/applications</span>
+        <span class="endpoint-desc">List all applications for authenticated user. Supports filtering by status, date range, and full-text search. Returns paginated results with cursor-based pagination.</span>
+      </div>
+      <div class="endpoint">
+        <span class="method POST">POST</span>
+        <span class="endpoint-path">/applications</span>
+        <span class="endpoint-desc">Create a new application. Triggers async AI job: extract key requirements from job description and compute initial match score against user's primary resume.</span>
+      </div>
+      <div class="endpoint">
+        <span class="method GET">GET</span>
+        <span class="endpoint-path">/applications/{id}</span>
+        <span class="endpoint-desc">Fetch single application with full timeline, contacts, and AI insights. Includes cached AI analysis results if available.</span>
+      </div>
+      <div class="endpoint">
+        <span class="method PATCH">PATCH</span>
+        <span class="endpoint-path">/applications/{id}</span>
+        <span class="endpoint-desc">Partial update. Status transitions are validated against a state machine (applied → screening → interview → offer → accepted/rejected). Invalid transitions return 422.</span>
+      </div>
+      <div class="endpoint">
+        <span class="method DELETE">DELETE</span>
+        <span class="endpoint-path">/applications/{id}</span>
+        <span class="endpoint-desc">Soft-delete (sets deleted_at). Hard delete via admin endpoint only. Cascades to events and contacts.</span>
+      </div>
+    </div>
+
+    <div class="section-group">Events &amp; Contacts</div>
+    <div class="endpoint-list">
+      <div class="endpoint">
+        <span class="method POST">POST</span>
+        <span class="endpoint-path">/applications/{id}/events</span>
+        <span class="endpoint-desc">Add a timeline event (interview scheduled, offer received, follow-up sent). Triggers reminder creation if event_date is in the future.</span>
+      </div>
+      <div class="endpoint">
+        <span class="method GET">GET</span>
+        <span class="endpoint-path">/applications/{id}/contacts</span>
+        <span class="endpoint-desc">List contacts associated with this application (recruiters, hiring managers, interviewers).</span>
+      </div>
+      <div class="endpoint">
+        <span class="method POST">POST</span>
+        <span class="endpoint-path">/applications/{id}/contacts</span>
+        <span class="endpoint-desc">Add a contact. Optionally triggers AI enrichment to find their LinkedIn or email from public sources.</span>
+      </div>
+    </div>
+
+    <div class="section-group">AI Endpoints</div>
+    <div class="endpoint-list">
+      <div class="endpoint">
+        <span class="method POST">POST</span>
+        <span class="endpoint-path">/ai/analyze-job</span>
+        <span class="endpoint-desc">Submit a job description for AI analysis. Returns a task_id. Async: extracts required skills, infers seniority, identifies company culture signals.</span>
+      </div>
+      <div class="endpoint">
+        <span class="method POST">POST</span>
+        <span class="endpoint-path">/ai/match-score</span>
+        <span class="endpoint-desc">Compute semantic similarity between a resume and a job description using embeddings. Returns score 0-100 with detailed breakdown by skill category.</span>
+      </div>
+      <div class="endpoint">
+        <span class="method POST">POST</span>
+        <span class="endpoint-path">/ai/interview-prep</span>
+        <span class="endpoint-desc">Generate tailored interview questions and suggested answers based on the job description and the user's resume. Streamed response via SSE.</span>
+      </div>
+      <div class="endpoint">
+        <span class="method POST">POST</span>
+        <span class="endpoint-path">/ai/cover-letter</span>
+        <span class="endpoint-desc">Generate a tailored cover letter. Streamed response. User provides tone preference and highlights to emphasize.</span>
+      </div>
+      <div class="endpoint">
+        <span class="method GET">GET</span>
+        <span class="endpoint-path">/ai/tasks/{task_id}</span>
+        <span class="endpoint-desc">Poll async AI task status. Returns pending | processing | complete | failed with partial or full result when available.</span>
+      </div>
+    </div>
+
+    <div class="section-group">Resumes</div>
+    <div class="endpoint-list">
+      <div class="endpoint">
+        <span class="method POST">POST</span>
+        <span class="endpoint-path">/resumes/upload</span>
+        <span class="endpoint-desc">Upload a resume PDF. Extracts text via pdfplumber, runs AI parsing to structure skills/experience, generates and stores embedding in Pinecone.</span>
+      </div>
+      <div class="endpoint">
+        <span class="method GET">GET</span>
+        <span class="endpoint-path">/resumes</span>
+        <span class="endpoint-desc">List all resume versions for the user. Users can store multiple tailored resumes.</span>
+      </div>
+    </div>
+
+    <h3>API Response Envelope</h3>
+    <div class="code-block">
+      <div class="code-header">
+        <span class="code-filename">api/core/response.py</span>
+        <span class="code-lang">Python</span>
+      </div>
+      <pre><span class="kw">from</span> pydantic <span class="kw">import</span> BaseModel
+<span class="kw">from</span> typing <span class="kw">import</span> Generic, TypeVar, Optional
+<span class="kw">import</span> uuid
+
+T = TypeVar(<span class="str">"T"</span>)
+
+<span class="kw">class</span> <span class="cls">APIResponse</span>(BaseModel, Generic[T]):
+    success: bool = <span class="kw">True</span>
+    data: Optional[T] = <span class="kw">None</span>
+    meta: Optional[dict] = <span class="kw">None</span>
+    request_id: str = <span class="fn">str</span>(uuid.<span class="fn">uuid4</span>())
+
+<span class="kw">class</span> <span class="cls">PaginatedResponse</span>(BaseModel, Generic[T]):
+    items: list[T]
+    total: int
+    cursor: Optional[str] = <span class="kw">None</span>
+    has_more: bool = <span class="kw">False</span>
+
+<span class="cmnt"># Usage in route handlers:</span>
+<span class="cmnt"># return APIResponse(data=PaginatedResponse(items=apps, total=count, has_more=has_more))</span></pre>
+    </div>
+  </section>
+
+  <!-- SECTION 5: IMPLEMENTATION -->
+  <section id="implementation">
+    <p class="section-label">Section 05</p>
+    <h2>Step-by-Step Implementation</h2>
+    <p>Implementation proceeds in three phases: backend foundation, frontend shell, then AI feature layer. Each phase is independently deployable. Never start AI features until auth and CRUD are solid.</p>
+
+    <h3>Phase 1 — Backend Foundation</h3>
+    <div class="step-list">
+
+      <div class="step">
+        <div class="step-num">01</div>
+        <div class="step-content">
+          <div class="step-title">Project Structure</div>
+          <div class="step-body">Establish the directory layout before writing any logic. Clean architecture means strict boundaries between layers.</div>
+          <div class="code-block">
+            <div class="code-header">
+              <span class="code-filename">backend/ directory structure</span>
+              <span class="code-lang">Shell</span>
+            </div>
+            <pre>backend/
+├── app/
+│   ├── <span class="fn">main.py</span>           <span class="cmnt"># FastAPI app factory</span>
+│   ├── core/
+│   │   ├── config.py      <span class="cmnt"># Pydantic Settings</span>
+│   │   ├── database.py    <span class="cmnt"># SQLAlchemy async engine</span>
+│   │   ├── security.py    <span class="cmnt"># JWT validation</span>
+│   │   └── deps.py        <span class="cmnt"># FastAPI dependencies</span>
+│   ├── domains/
+│   │   ├── applications/
+│   │   │   ├── router.py  <span class="cmnt"># HTTP layer only</span>
+│   │   │   ├── service.py <span class="cmnt"># Business logic</span>
+│   │   │   ├── repo.py    <span class="cmnt"># Database queries</span>
+│   │   │   └── schemas.py <span class="cmnt"># Pydantic models</span>
+│   │   ├── resumes/
+│   │   └── ai/
+│   ├── workers/
+│   │   ├── celery_app.py
+│   │   └── tasks/
+│   │       ├── resume_tasks.py
+│   │       └── ai_tasks.py
+│   └── migrations/        <span class="cmnt"># Alembic</span>
+├── tests/
+│   ├── unit/
+│   ├── integration/
+│   └── conftest.py
+├── pyproject.toml
+└── Dockerfile</pre>
+          </div>
+        </div>
+      </div>
+
+      <div class="step">
+        <div class="step-num">02</div>
+        <div class="step-content">
+          <div class="step-title">FastAPI Application Factory</div>
+          <div class="step-body">The app factory pattern keeps the application instance clean and testable. Middleware is registered here in the correct order (CORS before auth before rate limiting).</div>
+          <div class="code-block">
+            <div class="code-header">
+              <span class="code-filename">app/main.py</span>
+              <span class="code-lang">Python</span>
+            </div>
+            <pre><span class="kw">from</span> fastapi <span class="kw">import</span> FastAPI
+<span class="kw">from</span> fastapi.middleware.cors <span class="kw">import</span> CORSMiddleware
+<span class="kw">from</span> contextlib <span class="kw">import</span> asynccontextmanager
+<span class="kw">from</span> app.core.config <span class="kw">import</span> settings
+<span class="kw">from</span> app.core.database <span class="kw">import</span> engine
+<span class="kw">from</span> app.domains.applications.router <span class="kw">import</span> router <span class="kw">as</span> app_router
+<span class="kw">from</span> app.domains.ai.router <span class="kw">import</span> router <span class="kw">as</span> ai_router
+
+<span class="dec">@asynccontextmanager</span>
+<span class="kw">async def</span> <span class="fn">lifespan</span>(app: FastAPI):
+    <span class="cmnt"># Startup: validate DB connection, warm caches</span>
+    <span class="kw">async with</span> engine.<span class="fn">begin</span>() <span class="kw">as</span> conn:
+        <span class="kw">await</span> conn.<span class="fn">execute</span>(text(<span class="str">"SELECT 1"</span>))
+    <span class="kw">yield</span>
+    <span class="cmnt"># Shutdown: close pool gracefully</span>
+    <span class="kw">await</span> engine.<span class="fn">dispose</span>()
+
+<span class="kw">def</span> <span class="fn">create_app</span>() -> FastAPI:
+    app = <span class="cls">FastAPI</span>(
+        title=<span class="str">"JobTracker AI"</span>,
+        version=<span class="str">"1.0.0"</span>,
+        lifespan=lifespan,
+        docs_url=<span class="str">"/api/docs"</span> <span class="kw">if</span> settings.DEBUG <span class="kw">else</span> <span class="kw">None</span>,
+    )
+    app.<span class="fn">add_middleware</span>(
+        CORSMiddleware,
+        allow_origins=settings.CORS_ORIGINS,
+        allow_credentials=<span class="kw">True</span>,
+        allow_methods=[<span class="str">"*"</span>],
+        allow_headers=[<span class="str">"*"</span>],
+    )
+    app.<span class="fn">include_router</span>(app_router, prefix=<span class="str">"/api/v1"</span>)
+    app.<span class="fn">include_router</span>(ai_router, prefix=<span class="str">"/api/v1"</span>)
+    <span class="kw">return</span> app
+
+app = <span class="fn">create_app</span>()</pre>
+          </div>
+        </div>
+      </div>
+
+      <div class="step">
+        <div class="step-num">03</div>
+        <div class="step-content">
+          <div class="step-title">Authentication Middleware</div>
+          <div class="step-body">Validate Clerk JWTs on every request. Set the Postgres RLS context so the database enforces data isolation automatically — even if application code has bugs.</div>
+          <div class="code-block">
+            <div class="code-header">
+              <span class="code-filename">app/core/deps.py</span>
+              <span class="code-lang">Python</span>
+            </div>
+            <pre><span class="kw">from</span> fastapi <span class="kw">import</span> Depends, HTTPException, status
+<span class="kw">from</span> fastapi.security <span class="kw">import</span> HTTPBearer, HTTPAuthorizationCredentials
+<span class="kw">from</span> jose <span class="kw">import</span> jwt, JWTError
+<span class="kw">from</span> sqlalchemy.ext.asyncio <span class="kw">import</span> AsyncSession
+<span class="kw">from</span> app.core.database <span class="kw">import</span> get_db_session
+<span class="kw">from</span> app.domains.users.repo <span class="kw">import</span> UserRepo
+
+security = <span class="cls">HTTPBearer</span>()
+
+<span class="kw">async def</span> <span class="fn">get_current_user</span>(
+    credentials: HTTPAuthorizationCredentials = <span class="cls">Depends</span>(security),
+    db: AsyncSession = <span class="cls">Depends</span>(get_db_session),
+):
+    <span class="kw">try</span>:
+        payload = jwt.<span class="fn">decode</span>(
+            credentials.credentials,
+            settings.CLERK_JWT_PUBLIC_KEY,
+            algorithms=[<span class="str">"RS256"</span>],
+        )
+        clerk_id: str = payload.<span class="fn">get</span>(<span class="str">"sub"</span>)
+        <span class="kw">if not</span> clerk_id:
+            <span class="kw">raise</span> <span class="cls">HTTPException</span>(status.<span class="fn">HTTP_401_UNAUTHORIZED</span>)
+    <span class="kw">except</span> JWTError:
+        <span class="kw">raise</span> <span class="cls">HTTPException</span>(status.<span class="fn">HTTP_401_UNAUTHORIZED</span>)
+
+    user = <span class="kw">await</span> UserRepo(db).<span class="fn">get_by_clerk_id</span>(clerk_id)
+    <span class="kw">if not</span> user:
+        <span class="kw">raise</span> <span class="cls">HTTPException</span>(status.<span class="fn">HTTP_404_NOT_FOUND</span>, <span class="str">"User not found"</span>)
+
+    <span class="cmnt"># Set RLS context — Postgres will enforce isolation</span>
+    <span class="kw">await</span> db.<span class="fn">execute</span>(
+        text(<span class="str">"SELECT set_config('app.current_user_id', :uid, true)"</span>),
+        {<span class="str">"uid"</span>: <span class="fn">str</span>(user.id)},
+    )
+    <span class="kw">return</span> user</pre>
+          </div>
+        </div>
+      </div>
+
+      <div class="step">
+        <div class="step-num">04</div>
+        <div class="step-content">
+          <div class="step-title">Domain Service Layer</div>
+          <div class="step-body">The service layer owns business logic. It's the only layer that knows about both HTTP schemas and database models. Keep routers thin — they translate HTTP concerns only.</div>
+          <div class="code-block">
+            <div class="code-header">
+              <span class="code-filename">app/domains/applications/service.py</span>
+              <span class="code-lang">Python</span>
+            </div>
+            <pre><span class="kw">from</span> app.domains.applications.repo <span class="kw">import</span> ApplicationRepo
+<span class="kw">from</span> app.domains.applications.schemas <span class="kw">import</span> ApplicationCreate, ApplicationOut
+<span class="kw">from</span> app.workers.tasks.ai_tasks <span class="kw">import</span> analyze_job_async
+<span class="kw">from</span> app.core.exceptions <span class="kw">import</span> NotFoundError, ForbiddenError
+<span class="kw">import</span> uuid
+
+<span class="kw">class</span> <span class="cls">ApplicationService</span>:
+    STATUS_MACHINE = {
+        <span class="str">"applied"</span>:    {<span class="str">"screening"</span>, <span class="str">"rejected"</span>, <span class="str">"withdrawn"</span>},
+        <span class="str">"screening"</span>:  {<span class="str">"interview"</span>, <span class="str">"rejected"</span>},
+        <span class="str">"interview"</span>:  {<span class="str">"offer"</span>, <span class="str">"rejected"</span>},
+        <span class="str">"offer"</span>:      {<span class="str">"accepted"</span>, <span class="str">"rejected"</span>, <span class="str">"negotiating"</span>},
+        <span class="str">"negotiating"</span>:{<span class="str">"accepted"</span>, <span class="str">"rejected"</span>},
+    }
+
+    <span class="kw">def</span> <span class="fn">__init__</span>(self, repo: <span class="cls">ApplicationRepo</span>):
+        self.repo = repo
+
+    <span class="kw">async def</span> <span class="fn">create</span>(self, user_id: uuid.UUID, data: <span class="cls">ApplicationCreate</span>) -> <span class="cls">ApplicationOut</span>:
+        app = <span class="kw">await</span> self.repo.<span class="fn">create</span>(user_id, data)
+        <span class="cmnt"># Enqueue AI analysis — non-blocking</span>
+        <span class="kw">if</span> data.job_description:
+            analyze_job_async.<span class="fn">delay</span>(<span class="fn">str</span>(app.id), data.job_description)
+        <span class="kw">return</span> <span class="cls">ApplicationOut</span>.<span class="fn">model_validate</span>(app)
+
+    <span class="kw">async def</span> <span class="fn">transition_status</span>(self, app_id, current_user_id, new_status):
+        app = <span class="kw">await</span> self.repo.<span class="fn">get_or_404</span>(app_id)
+        allowed = self.STATUS_MACHINE.<span class="fn">get</span>(app.status, set())
+        <span class="kw">if</span> new_status <span class="kw">not in</span> allowed:
+            <span class="kw">raise</span> <span class="cls">ValueError</span>(
+                <span class="str">f"Cannot transition from {app.status} to {new_status}"</span>
+            )
+        <span class="kw">return await</span> self.repo.<span class="fn">update_status</span>(app_id, new_status)</pre>
+          </div>
+        </div>
+      </div>
+
+      <div class="step">
+        <div class="step-num">05</div>
+        <div class="step-content">
+          <div class="step-title">Celery Task Configuration</div>
+          <div class="step-body">Configure the task queue with proper retry logic, task routing, and result expiry. Separate queues for AI tasks (slow) and utility tasks (fast) allow independent scaling.</div>
+          <div class="code-block">
+            <div class="code-header">
+              <span class="code-filename">app/workers/celery_app.py</span>
+              <span class="code-lang">Python</span>
+            </div>
+            <pre><span class="kw">from</span> celery <span class="kw">import</span> Celery
+<span class="kw">from</span> kombu <span class="kw">import</span> Queue, Exchange
+<span class="kw">from</span> app.core.config <span class="kw">import</span> settings
+
+celery = <span class="cls">Celery</span>(<span class="str">"jobtracker"</span>, broker=settings.REDIS_URL)
+
+celery.conf.<span class="fn">update</span>(
+    result_backend=settings.REDIS_URL,
+    task_serializer=<span class="str">"json"</span>,
+    result_expires=<span class="num">3600</span>,           <span class="cmnt"># Results expire in 1hr</span>
+    task_acks_late=<span class="kw">True</span>,             <span class="cmnt"># Only ack after completion</span>
+    worker_prefetch_multiplier=<span class="num">1</span>,     <span class="cmnt"># No batch prefetching for AI</span>
+    task_routes={
+        <span class="str">"workers.tasks.ai_tasks.*"</span>: {<span class="str">"queue"</span>: <span class="str">"ai"</span>},
+        <span class="str">"workers.tasks.util_tasks.*"</span>: {<span class="str">"queue"</span>: <span class="str">"default"</span>},
+    },
+    task_queues=[
+        <span class="cls">Queue</span>(<span class="str">"ai"</span>, routing_key=<span class="str">"ai"</span>),
+        <span class="cls">Queue</span>(<span class="str">"default"</span>, routing_key=<span class="str">"default"</span>),
+    ],
+    <span class="cmnt"># Retry: 3 attempts with exponential backoff</span>
+    task_default_retry_delay=<span class="num">30</span>,
+    task_max_retries=<span class="num">3</span>,
+)</pre>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <h3>Phase 2 — Frontend</h3>
+    <div class="step-list">
+      <div class="step">
+        <div class="step-num">06</div>
+        <div class="step-content">
+          <div class="step-title">Next.js App Router Structure</div>
+          <div class="step-body">Use the App Router with server components by default. Client components only for interactivity. Clerk middleware protects all authenticated routes at the edge.</div>
+          <div class="code-block">
+            <div class="code-header">
+              <span class="code-filename">frontend/ key structure</span>
+              <span class="code-lang">Shell</span>
+            </div>
+            <pre>frontend/
+├── app/
+│   ├── (auth)/
+│   │   ├── sign-in/page.tsx    <span class="cmnt"># Clerk &lt;SignIn /&gt; component</span>
+│   │   └── sign-up/page.tsx
+│   ├── (dashboard)/            <span class="cmnt"># Protected route group</span>
+│   │   ├── layout.tsx          <span class="cmnt"># Sidebar + nav (server component)</span>
+│   │   ├── page.tsx            <span class="cmnt"># Dashboard (server component)</span>
+│   │   ├── applications/
+│   │   │   ├── page.tsx        <span class="cmnt"># Kanban board</span>
+│   │   │   └── [id]/page.tsx   <span class="cmnt"># Detail view + AI panel</span>
+│   │   ├── analytics/page.tsx
+│   │   └── settings/page.tsx
+│   ├── api/
+│   │   └── webhooks/clerk/route.ts  <span class="cmnt"># Sync users → Postgres</span>
+│   ├── layout.tsx              <span class="cmnt"># Root: ClerkProvider + QueryClient</span>
+│   └── globals.css
+├── components/
+│   ├── applications/
+│   │   ├── KanbanBoard.tsx     <span class="cmnt"># Client: drag-and-drop</span>
+│   │   ├── ApplicationCard.tsx
+│   │   └── AddApplicationDialog.tsx
+│   ├── ai/
+│   │   ├── MatchScorePanel.tsx
+│   │   └── InterviewPrepStream.tsx  <span class="cmnt"># SSE streaming</span>
+│   └── ui/                     <span class="cmnt"># shadcn/ui base components</span>
+├── lib/
+│   ├── api.ts                  <span class="cmnt"># Typed API client</span>
+│   ├── hooks/                  <span class="cmnt"># React Query hooks</span>
+│   └── types.ts
+└── middleware.ts               <span class="cmnt"># Clerk edge middleware</span></pre>
+          </div>
+        </div>
+      </div>
+
+      <div class="step">
+        <div class="step-num">07</div>
+        <div class="step-content">
+          <div class="step-title">Type-Safe API Client</div>
+          <div class="step-body">A thin typed wrapper around fetch — no Axios, no code generation overhead for this scale. Every response is typed and errors are handled uniformly.</div>
+          <div class="code-block">
+            <div class="code-header">
+              <span class="code-filename">frontend/lib/api.ts</span>
+              <span class="code-lang">TypeScript</span>
+            </div>
+            <pre><span class="kw">import</span> { auth } <span class="kw">from</span> <span class="str">"@clerk/nextjs/server"</span>;
+
+<span class="kw">const</span> BASE = process.env.NEXT_PUBLIC_API_URL;
+
+<span class="kw">async function</span> <span class="fn">apiFetch</span>&lt;T&gt;(
+  path: <span class="py-type">string</span>,
+  init?: RequestInit
+): <span class="cls">Promise</span>&lt;T&gt; {
+  <span class="kw">const</span> { getToken } = <span class="fn">auth</span>();
+  <span class="kw">const</span> token = <span class="kw">await</span> <span class="fn">getToken</span>();
+
+  <span class="kw">const</span> res = <span class="kw">await</span> <span class="fn">fetch</span>(`${BASE}${path}`, {
+    ...init,
+    headers: {
+      <span class="str">"Content-Type"</span>: <span class="str">"application/json"</span>,
+      Authorization: `Bearer ${token}`,
+      ...init?.headers,
+    },
+    next: { revalidate: <span class="num">0</span> },
+  });
+
+  <span class="kw">if</span> (!res.ok) {
+    <span class="kw">const</span> err = <span class="kw">await</span> res.<span class="fn">json</span>().<span class="fn">catch</span>(() => ({}));
+    <span class="kw">throw new</span> <span class="cls">ApiError</span>(res.status, err.detail ?? <span class="str">"Unknown error"</span>);
+  }
+
+  <span class="kw">const</span> body = <span class="kw">await</span> res.<span class="fn">json</span>();
+  <span class="kw">return</span> body.data <span class="kw">as</span> T;
+}
+
+<span class="kw">export const</span> api = {
+  applications: {
+    <span class="fn">list</span>: (params?) => <span class="fn">apiFetch</span>(<span class="str">`/api/v1/applications?${new URLSearchParams(params)}`</span>),
+    <span class="fn">get</span>: (id: <span class="py-type">string</span>) => <span class="fn">apiFetch</span>(<span class="str">`/api/v1/applications/${id}`</span>),
+    <span class="fn">create</span>: (body) => <span class="fn">apiFetch</span>(<span class="str">`/api/v1/applications`</span>, { method: <span class="str">"POST"</span>, body: <span class="cls">JSON</span>.<span class="fn">stringify</span>(body) }),
+    <span class="fn">patch</span>: (id, body) => <span class="fn">apiFetch</span>(<span class="str">`/api/v1/applications/${id}`</span>, { method: <span class="str">"PATCH"</span>, body: <span class="cls">JSON</span>.<span class="fn">stringify</span>(body) }),
+  },
+};</pre>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- SECTION 6: AI FEATURES -->
+  <section id="ai-features">
+    <p class="section-label">Section 06</p>
+    <h2>AI Feature Implementation</h2>
+    <p>Four production AI features, each designed to deliver measurable value. All are async and gracefully degrade — if the AI service is down, the core app still functions.</p>
+
+    <div class="ai-feature">
+      <div class="ai-icon" style="background: rgba(108,99,255,0.15);">🎯</div>
+      <div>
+        <div class="ai-feature-title">Job–Resume Match Scoring</div>
+        <div class="ai-feature-desc">Generates text-embedding-3-large embeddings for both the job description and the user's resume. Computes cosine similarity in Pinecone. Returns a 0–100 score with per-skill-category breakdown (technical skills, soft skills, experience level, domain fit). Scores update automatically when the user uploads a new resume. Average latency: 800ms on the worker; zero latency on the API (async).</div>
+      </div>
+    </div>
+
+    <div class="ai-feature">
+      <div class="ai-icon" style="background: rgba(45,212,191,0.12);">📋</div>
+      <div>
+        <div class="ai-feature-title">Resume & JD Parsing</div>
+        <div class="ai-feature-desc">Uses GPT-4o with structured output (JSON mode) to extract skills, years of experience per domain, education, company names, and employment gaps from raw resume text. For job descriptions, extracts required vs. preferred qualifications, seniority signals, compensation signals, and company culture markers. Results stored in JSONB for fast re-querying without re-inference.</div>
+      </div>
+    </div>
+
+    <div class="ai-feature">
+      <div class="ai-icon" style="background: rgba(245,158,11,0.1);">💬</div>
+      <div>
+        <div class="ai-feature-title">Interview Preparation</div>
+        <div class="ai-feature-desc">Generates tailored interview question sets streamed via Server-Sent Events. System prompt is constructed from the parsed job requirements + user's resume + company research context. Output format: 10 behavioral questions (STAR-formatted suggested answers), 5 technical questions with hints, and 3 questions for the candidate to ask. Streamed to avoid timeout on long generation.</div>
+      </div>
+    </div>
+
+    <div class="ai-feature">
+      <div class="ai-icon" style="background: rgba(248,113,113,0.1);">✍️</div>
+      <div>
+        <div class="ai-feature-title">Cover Letter Generation</div>
+        <div class="ai-feature-desc">Streamed GPT-4o generation with a structured system prompt that enforces: no clichés ("I am excited to apply..."), specificity requirement (must reference actual job requirements), and a chosen tone (formal, conversational, or startup-casual). The prompt includes the full job description, user's resume, and 2-3 user-provided highlights to emphasize. Users can regenerate with modified parameters without another API call — uses client-side prompt rebuilding.</div>
+      </div>
+    </div>
+
+    <h3>AI Task Implementation</h3>
+    <div class="code-block">
+      <div class="code-header">
+        <span class="code-filename">app/workers/tasks/ai_tasks.py</span>
+        <span class="code-lang">Python</span>
+      </div>
+      <pre><span class="kw">from</span> celery <span class="kw">import</span> shared_task
+<span class="kw">from</span> openai <span class="kw">import</span> AsyncOpenAI
+<span class="kw">from</span> app.workers.celery_app <span class="kw">import</span> celery
+<span class="kw">from</span> app.core.database <span class="kw">import</span> get_sync_session
+<span class="kw">from</span> app.domains.ai.service <span class="kw">import</span> AITaskService
+
+oai = <span class="cls">AsyncOpenAI</span>()
+
+<span class="dec">@celery.task</span>(
+    bind=<span class="kw">True</span>,
+    queue=<span class="str">"ai"</span>,
+    max_retries=<span class="num">3</span>,
+    autoretry_for=(Exception,),
+    retry_backoff=<span class="kw">True</span>,
+    retry_backoff_max=<span class="num">120</span>,
+)
+<span class="kw">def</span> <span class="fn">analyze_job_async</span>(self, application_id: str, job_description: str):
+    <span class="kw">with</span> <span class="fn">get_sync_session</span>() <span class="kw">as</span> db:
+        svc = <span class="cls">AITaskService</span>(db)
+        svc.<span class="fn">set_task_processing</span>(application_id)
+
+        response = oai.chat.completions.<span class="fn">create</span>(
+            model=<span class="str">"gpt-4o"</span>,
+            response_format={<span class="str">"type"</span>: <span class="str">"json_object"</span>},
+            messages=[
+                {<span class="str">"role"</span>: <span class="str">"system"</span>, <span class="str">"content"</span>: <span class="cls">JOB_ANALYSIS_PROMPT</span>},
+                {<span class="str">"role"</span>: <span class="str">"user"</span>, <span class="str">"content"</span>: job_description},
+            ],
+            temperature=<span class="num">0.1</span>,  <span class="cmnt"># Low temp for structured extraction</span>
+        )
+
+        result = json.<span class="fn">loads</span>(response.choices[<span class="num">0</span>].message.content)
+        svc.<span class="fn">store_job_analysis</span>(application_id, result)
+        svc.<span class="fn">set_task_complete</span>(application_id, result)
+
+<span class="cls">JOB_ANALYSIS_PROMPT</span> = <span class="str">"""
+Extract structured data from this job description. Return JSON with keys:
+- required_skills: list of strings (technical skills explicitly required)
+- preferred_skills: list of strings (nice-to-have)
+- seniority_level: "junior"|"mid"|"senior"|"staff"|"principal"
+- estimated_yoe: integer (years of experience implied)
+- domain: primary industry/domain string
+- compensation_signals: object with min/max/currency if present
+- culture_signals: list of strings (remote/hybrid/startup/etc)
+- key_requirements: top 5 most important requirements as bullet strings
+"""</span></pre>
+    </div>
+
+    <h3>SSE Streaming Endpoint</h3>
+    <div class="code-block">
+      <div class="code-header">
+        <span class="code-filename">app/domains/ai/router.py</span>
+        <span class="code-lang">Python</span>
+      </div>
+      <pre><span class="kw">from</span> fastapi <span class="kw">import</span> APIRouter
+<span class="kw">from</span> fastapi.responses <span class="kw">import</span> StreamingResponse
+
+<span class="dec">@router.post</span>(<span class="str">"/ai/interview-prep"</span>)
+<span class="kw">async def</span> <span class="fn">interview_prep</span>(
+    req: <span class="cls">InterviewPrepRequest</span>,
+    user = <span class="cls">Depends</span>(get_current_user),
+):
+    <span class="kw">async def</span> <span class="fn">stream_response</span>():
+        <span class="kw">async with</span> oai.chat.completions.<span class="fn">stream</span>(
+            model=<span class="str">"gpt-4o"</span>,
+            messages=<span class="fn">build_interview_messages</span>(req, user),
+        ) <span class="kw">as</span> stream:
+            <span class="kw">async for</span> chunk <span class="kw">in</span> stream:
+                delta = chunk.choices[<span class="num">0</span>].delta.content <span class="kw">or</span> <span class="str">""</span>
+                <span class="kw">yield</span> <span class="str">f"data: {json.dumps({'delta': delta})}\n\n"</span>
+        <span class="kw">yield</span> <span class="str">"data: [DONE]\n\n"</span>
+
+    <span class="kw">return</span> <span class="cls">StreamingResponse</span>(
+        <span class="fn">stream_response</span>(),
+        media_type=<span class="str">"text/event-stream"</span>,
+        headers={<span class="str">"X-Accel-Buffering"</span>: <span class="str">"no"</span>},
+    )</pre>
+    </div>
+  </section>
+
+  <!-- SECTION 7: DEPLOYMENT -->
+  <section id="deployment">
+    <p class="section-label">Section 07</p>
+    <h2>Deployment Guide</h2>
+    <p>Two-environment setup: staging mirrors production exactly. All infrastructure is defined as code. No manual console operations in production.</p>
+
+    <h3>Environment Variables</h3>
+    <table class="env-table">
+      <tr><th>Variable</th><th>Value Pattern</th><th>Notes</th></tr>
+      <tr><td>DATABASE_URL</td><td>postgresql+asyncpg://...</td><td>Railway-provisioned Postgres</td></tr>
+      <tr><td>REDIS_URL</td><td>redis://...</td><td>Railway Redis, used by Celery</td></tr>
+      <tr><td>CLERK_JWT_PUBLIC_KEY</td><td>-----BEGIN PUBLIC KEY-----...</td><td>From Clerk dashboard → API Keys</td></tr>
+      <tr><td>CLERK_SECRET_KEY</td><td>sk_live_...</td><td>For webhook verification only</td></tr>
+      <tr><td>OPENAI_API_KEY</td><td>sk-...</td><td>GPT-4o + Embeddings API</td></tr>
+      <tr><td>PINECONE_API_KEY</td><td>pcsk_...</td><td>Vector index for resume matching</td></tr>
+      <tr><td>PINECONE_INDEX_NAME</td><td>jobtracker-resumes</td><td>1536-dim for text-embedding-3-large</td></tr>
+      <tr><td>CORS_ORIGINS</td><td>["https://app.yoursite.com"]</td><td>JSON array of allowed origins</td></tr>
+      <tr><td>S3_BUCKET</td><td>jobtracker-resumes-prod</td><td>Cloudflare R2 or AWS S3</td></tr>
+      <tr><td>STRIPE_SECRET_KEY</td><td>sk_live_...</td><td>Billing (Pro tier)</td></tr>
+    </table>
+
+    <h3>Infrastructure</h3>
+    <div class="deploy-grid">
+      <div class="deploy-card">
+        <h4><div class="deploy-dot" style="background: #6c63ff;"></div>Frontend — Vercel</h4>
+        <p style="font-size: 13px;">Connect GitHub repo. Set environment variables. Automatic preview deployments on every PR. Production deploys from <code style="font-family: var(--font-mono); font-size: 12px;">main</code> branch only. Enable Vercel Analytics and Speed Insights. Custom domain via Cloudflare CNAME.</p>
+      </div>
+      <div class="deploy-card">
+        <h4><div class="deploy-dot" style="background: #2dd4bf;"></div>Backend API — Railway</h4>
+        <p style="font-size: 13px;">Deploy from Dockerfile. Railway provisions Postgres and Redis in the same private network — zero-latency internal connections. Scale API service to 2 replicas minimum. Set health check to <code style="font-family: var(--font-mono); font-size: 12px;">/health</code>.</p>
+      </div>
+      <div class="deploy-card">
+        <h4><div class="deploy-dot" style="background: #f59e0b;"></div>Celery Workers — Railway</h4>
+        <p style="font-size: 13px;">Separate Railway service running <code style="font-family: var(--font-mono); font-size: 12px;">celery worker -Q ai,default</code>. Scale AI worker to 1 replica (GPT-4o rate limits make more workers wasteful). Default queue can scale to 3. Monitor via Flower dashboard.</p>
+      </div>
+      <div class="deploy-card">
+        <h4><div class="deploy-dot" style="background: #f87171;"></div>CDN / Security — Cloudflare</h4>
+        <p style="font-size: 13px;">Proxy all traffic. WAF rules: block common attack patterns, rate-limit auth endpoints to 10 req/min/IP. Cache static assets at edge. Add security headers (HSTS, CSP, X-Frame-Options) via Transform Rules.</p>
+      </div>
+    </div>
+
+    <h3>CI/CD Pipeline</h3>
+    <div class="code-block">
+      <div class="code-header">
+        <span class="code-filename">.github/workflows/deploy.yml</span>
+        <span class="code-lang">YAML</span>
+      </div>
+      <pre><span class="kw">name:</span> Deploy
+
+<span class="kw">on:</span>
+  <span class="kw">push:</span>
+    <span class="kw">branches:</span> [main]
+
+<span class="kw">jobs:</span>
+  <span class="kw">test-backend:</span>
+    <span class="kw">runs-on:</span> ubuntu-latest
+    <span class="kw">services:</span>
+      <span class="kw">postgres:</span>
+        <span class="kw">image:</span> postgres:16
+        <span class="kw">env:</span>
+          <span class="kw">POSTGRES_DB:</span> test_db
+          <span class="kw">POSTGRES_PASSWORD:</span> test
+    <span class="kw">steps:</span>
+      - <span class="kw">uses:</span> actions/checkout@v4
+      - <span class="kw">run:</span> pip install -r requirements.txt
+      - <span class="kw">run:</span> pytest tests/ -v --cov=app --cov-fail-under=<span class="num">80</span>
+
+  <span class="kw">test-frontend:</span>
+    <span class="kw">runs-on:</span> ubuntu-latest
+    <span class="kw">steps:</span>
+      - <span class="kw">uses:</span> actions/checkout@v4
+      - <span class="kw">run:</span> pnpm install --frozen-lockfile
+      - <span class="kw">run:</span> pnpm type-check
+      - <span class="kw">run:</span> pnpm test
+
+  <span class="kw">deploy:</span>
+    <span class="kw">needs:</span> [test-backend, test-frontend]
+    <span class="kw">runs-on:</span> ubuntu-latest
+    <span class="kw">steps:</span>
+      - <span class="kw">name:</span> Deploy to Railway
+        <span class="kw">run:</span> railway up --service api
+        <span class="kw">env:</span>
+          <span class="kw">RAILWAY_TOKEN:</span> ${{ secrets.RAILWAY_TOKEN }}</pre>
+    </div>
+
+    <h3>Database Migrations</h3>
+    <div class="code-block">
+      <div class="code-header">
+        <span class="code-filename">Dockerfile — migration entrypoint</span>
+        <span class="code-lang">Dockerfile</span>
+      </div>
+      <pre><span class="kw">FROM</span> python:<span class="num">3.12</span>-slim
+
+<span class="kw">WORKDIR</span> /app
+<span class="kw">COPY</span> pyproject.toml .
+<span class="kw">RUN</span> pip install -e .
+
+<span class="kw">COPY</span> . .
+
+<span class="cmnt"># Run migrations before starting server</span>
+<span class="cmnt"># Railway: set Start Command to this entrypoint</span>
+<span class="kw">CMD</span> [<span class="str">"sh"</span>, <span class="str">"-c"</span>, <span class="str">"alembic upgrade head && uvicorn app.main:app --host 0.0.0.0 --port 8000 --workers 2"</span>]</pre>
+    </div>
+
+    <div class="callout callout-success">
+      <strong>Production checklist before go-live</strong>
+      Rotate all API keys from dev environment. Enable Postgres connection pooling via PgBouncer (Railway add-on). Set NEXT_PUBLIC_API_URL to production API domain. Verify Clerk webhook endpoint is registered and signature validation is active. Enable Sentry error tracking on both frontend and backend. Set up Uptime Robot monitoring on /health endpoint. Configure Railway alerts for memory > 80% and error rate > 1%.
+    </div>
+
+    <h3>Scaling Strategy</h3>
+    <p><strong>0–1K users (MVP):</strong> Single API replica, 1 Celery worker per queue, Railway Starter plan, free Pinecone tier. Cost: ~$25/month.</p>
+    <p><strong>1K–10K users:</strong> 2 API replicas, auto-scale Celery AI worker to 2, add PgBouncer, Redis cluster. Add Cloudflare Workers for edge caching of AI results. Cost: ~$200/month.</p>
+    <p><strong>10K+ users:</strong> Migrate API to GCP Cloud Run (per-request billing), Celery on GKE with KEDA autoscaling, Cloud SQL with read replicas, regional Cloudflare deployment. Instrument everything with OpenTelemetry → Grafana.</p>
+  </section>
+
+</div>
+
+<footer>
+  <div class="page" style="padding: 0 2rem;">
+    AI-Powered Job Application Tracker — System Design Document · Production-grade architecture reference · v1.0
+  </div>
+</footer>
+
+</body>
+</html>
