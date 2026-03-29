@@ -9,10 +9,23 @@ type Application = {
   applied_date: string
 }
 
+const STATUS_OPTIONS = ['applied', 'screening', 'interview', 'offer', 'rejected', 'withdrawn']
+
+const statusColors: Record<string, string> = {
+  applied: 'bg-blue-500/10 text-blue-400',
+  screening: 'bg-yellow-500/10 text-yellow-400',
+  interview: 'bg-purple-500/10 text-purple-400',
+  offer: 'bg-green-500/10 text-green-400',
+  rejected: 'bg-red-500/10 text-red-400',
+  withdrawn: 'bg-gray-500/10 text-gray-400',
+}
+
 export default function Home() {
   const [apps, setApps] = useState<Application[]>([])
   const [loading, setLoading] = useState(true)
   const [showForm, setShowForm] = useState(false)
+  const [deletingId, setDeletingId] = useState<string | null>(null)
+  const [updatingId, setUpdatingId] = useState<string | null>(null)
   const [form, setForm] = useState({
     company_name: '',
     job_title: '',
@@ -43,20 +56,33 @@ export default function Home() {
     fetchApps()
   }
 
+  async function deleteApp(id: string) {
+    if (!confirm('Delete this application?')) return
+    setDeletingId(id)
+    await fetch(`http://localhost:8000/api/v1/applications/${id}`, {
+      method: 'DELETE'
+    })
+    setDeletingId(null)
+    fetchApps()
+  }
+
+  async function updateStatus(id: string, status: string) {
+    setUpdatingId(id)
+    await fetch(`http://localhost:8000/api/v1/applications/${id}`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ status })
+    })
+    setUpdatingId(null)
+    fetchApps()
+  }
+
   const stats = [
     { label: 'Total Applied', value: apps.length },
     { label: 'In Progress', value: apps.filter(a => ['screening', 'interview'].includes(a.status)).length },
     { label: 'Interviews', value: apps.filter(a => a.status === 'interview').length },
     { label: 'Offers', value: apps.filter(a => a.status === 'offer').length },
   ]
-
-  const statusColors: Record<string, string> = {
-    applied: 'bg-blue-500/10 text-blue-400',
-    screening: 'bg-yellow-500/10 text-yellow-400',
-    interview: 'bg-purple-500/10 text-purple-400',
-    offer: 'bg-green-500/10 text-green-400',
-    rejected: 'bg-red-500/10 text-red-400',
-  }
 
   return (
     <main className="min-h-screen bg-gray-950 text-white">
@@ -92,11 +118,9 @@ export default function Home() {
                 onChange={e => setForm({ ...form, status: e.target.value })}
                 className="w-full bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-sm outline-none focus:border-violet-500"
               >
-                <option value="applied">Applied</option>
-                <option value="screening">Screening</option>
-                <option value="interview">Interview</option>
-                <option value="offer">Offer</option>
-                <option value="rejected">Rejected</option>
+                {STATUS_OPTIONS.map(s => (
+                  <option key={s} value={s}>{s.charAt(0).toUpperCase() + s.slice(1)}</option>
+                ))}
               </select>
               <input
                 type="date"
@@ -158,6 +182,7 @@ export default function Home() {
                   <th className="px-6 py-3">Role</th>
                   <th className="px-6 py-3">Status</th>
                   <th className="px-6 py-3">Applied</th>
+                  <th className="px-6 py-3">Actions</th>
                 </tr>
               </thead>
               <tbody>
@@ -166,11 +191,27 @@ export default function Home() {
                     <td className="px-6 py-4 font-medium">{app.company_name}</td>
                     <td className="px-6 py-4 text-gray-400">{app.job_title}</td>
                     <td className="px-6 py-4">
-                      <span className={`text-xs px-2 py-1 rounded-full ${statusColors[app.status] || 'bg-gray-700 text-gray-300'}`}>
-                        {app.status}
-                      </span>
+                      <select
+                        value={app.status}
+                        disabled={updatingId === app.id}
+                        onChange={e => updateStatus(app.id, e.target.value)}
+                        className={`text-xs px-2 py-1 rounded-full border-0 outline-none cursor-pointer ${statusColors[app.status] || 'bg-gray-700 text-gray-300'}`}
+                      >
+                        {STATUS_OPTIONS.map(s => (
+                          <option key={s} value={s}>{s.charAt(0).toUpperCase() + s.slice(1)}</option>
+                        ))}
+                      </select>
                     </td>
                     <td className="px-6 py-4 text-gray-400 text-sm">{app.applied_date}</td>
+                    <td className="px-6 py-4">
+                      <button
+                        onClick={() => deleteApp(app.id)}
+                        disabled={deletingId === app.id}
+                        className="text-xs text-red-400 hover:text-red-300 transition disabled:opacity-50"
+                      >
+                        {deletingId === app.id ? 'Deleting...' : 'Delete'}
+                      </button>
+                    </td>
                   </tr>
                 ))}
               </tbody>
